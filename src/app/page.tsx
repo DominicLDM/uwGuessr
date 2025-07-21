@@ -116,7 +116,7 @@ export default function Component() {
           </button>
         </div>
         <p className="text-sm text-slate-600">
-          © 2025 {isGooseMode ? "uwGoosr" : "uwGuessr"}. Made with ❤️ and Slushies.
+          © 2025 {isGooseMode ? "uwGeesr" : "uwGuessr"}. Made with ❤️ and Slushies.
         </p>
       </footer>
     </div>
