@@ -52,7 +52,7 @@ export default function Component() {
           </div>
 
           <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-slate-600">
-            Get ready to explore the 'Loo!
+            Get ready to explore the &apos;Loo!
           </p>
         </div>
 
