@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Play, Calendar, Trophy, Users, MapPin, Bird } from "lucide-react"
 import Link from "next/link"
+import TopoBackground from "@/components/TopoBackground"
 
 export default function Component() {
   const [mounted, setMounted] = useState(false)
@@ -32,14 +33,16 @@ export default function Component() {
   if (!mounted) return null
 
   return (
-    <div className="min-h-screen flex flex-col text-slate-900" style = {{ backgroundColor : "#FFFFF7" }}>
+    <div className="relative min-h-svh flex flex-col text-slate-900" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
+      {/* Enhanced Animated Topographical Background */}
+      <TopoBackground />
       {/* Header - Empty for clean look */}
       <header className="p-6 md:p-8"></header>
 
       {/* Main Content */}
       <main className="flex flex-col items-center justify-center flex-1 px-6">
         {/* Logo Section */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 relative z-10">
           <div className="relative inline-block">
             <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-3">
               <span className="text-yellow-500">uw</span>
@@ -48,7 +51,7 @@ export default function Component() {
           </div>
 
           <div className="flex justify-center mb-6">
-            <div className="h-1 w-24 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full" />
+            <div className="h-1 w-24 bg-gradient-to-r from-yellow-400 to-yellow-400 rounded-full" />
           </div>
 
           <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-slate-600">
@@ -57,10 +60,10 @@ export default function Component() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 relative z-10">
           <Button
             size="lg"
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
           >
             <Play className="mr-2 h-5 w-5" />
             Start Playing
@@ -69,7 +72,7 @@ export default function Component() {
           <Button
             variant="outline"
             size="lg"
-            className="font-semibold px-8 py-3 text-lg rounded-xl border-2 border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white transition-all duration-300 hover:scale-105 bg-transparent"
+            className="font-semibold px-8 py-3 text-lg rounded-xl border-2 border-black text-yellow-500 hover:bg-black hover:shadow-xl hover:text-yellow-500 transition-all duration-300 hover:scale-105 bg-black cursor-pointer"
           >
             <Calendar className="mr-2 h-5 w-5" />
             Daily Challenge
@@ -77,18 +80,18 @@ export default function Component() {
         </div>
 
         {/* Stats Section */}
-        <Card className="w-full max-w-sm transition-all duration-500 bg-gradient-to-br from-yellow-50 to-yellow-100/50 border-yellow-200 backdrop-blur-sm">
+        <Card className="w-full max-w-sm transition-all duration-500 bg-white/90 border-black-200 backdrop-blur-4px relative z-5 shadow-lg hover:shadow-xl">
           <CardContent className="p-4">
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
                 {React.createElement(stats[currentStat].icon, {
-                  className: "w-5 h-5 text-yellow-600 mr-2",
+                  className: "w-6 h-6 text-yellow-500 mr-2",
                 })}
                 <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 border-yellow-500/30 text-xs">
                   Live Stats
                 </Badge>
               </div>
-              <div className="text-2xl font-bold text-yellow-600 mb-1">{stats[currentStat].value}</div>
+              <div className="text-3xl font-bold text-black-600 mb-1">{stats[currentStat].value}</div>
               <div className="text-sm text-slate-700">{stats[currentStat].label}</div>
             </div>
           </CardContent>
@@ -96,7 +99,7 @@ export default function Component() {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 px-6 text-center">
+      <footer className="py-6 px-6 text-center relative z-10">
         <div className="flex justify-center gap-8 mb-4 text-sm">
           <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors">
             About
