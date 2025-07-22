@@ -9,12 +9,12 @@ const lineColors = ['rgba(255, 215, 0, 0.8)', 'rgba(253, 224, 71, 0.8)', 'rgba(2
 const mouseDown = true; // enable mouse interaction
 
 const binaryToType = (nw: number, ne: number, se: number, sw: number) => {
-  let a = [nw, ne, se, sw];
+  const a = [nw, ne, se, sw];
   return a.reduce((res, x) => (res << 1) | x);
 };
 // Mouse position ref will be declared inside the component
 import React, { useRef, useEffect } from 'react';
-// @ts-ignore
+// @ts-expect-error
 import * as ChriscoursesPerlinNoise from '@chriscourses/perlin-noise';
 
 
@@ -43,10 +43,11 @@ const TopoBackground: React.FC = () => {
     };
     frameId = requestAnimationFrame(animateWrapper);
     // Cleanup
+    const canvas = canvasRef.current;
     return () => {
       window.removeEventListener('resize', canvasSize);
-      if (canvasRef.current) {
-        canvasRef.current.removeEventListener('mousemove', handleMouseMove);
+      if (canvas) {
+        canvas.removeEventListener('mousemove', handleMouseMove);
       }
       cancelAnimationFrame(frameId);
     };
@@ -174,7 +175,7 @@ const TopoBackground: React.FC = () => {
       for (let x = 0; x < inputValues[y].length - 1; x++) {
         if (inputValues[y][x] > currentThresholdRef.current && inputValues[y][x + 1] > currentThresholdRef.current && inputValues[y + 1][x + 1] > currentThresholdRef.current && inputValues[y + 1][x] > currentThresholdRef.current) continue;
         if (inputValues[y][x] < currentThresholdRef.current && inputValues[y][x + 1] < currentThresholdRef.current && inputValues[y + 1][x + 1] < currentThresholdRef.current && inputValues[y + 1][x] < currentThresholdRef.current) continue;
-        let gridValue = binaryToType(
+        const gridValue = binaryToType(
           inputValues[y][x] > currentThresholdRef.current ? 1 : 0,
           inputValues[y][x + 1] > currentThresholdRef.current ? 1 : 0,
           inputValues[y + 1][x + 1] > currentThresholdRef.current ? 1 : 0,
@@ -200,10 +201,10 @@ const TopoBackground: React.FC = () => {
 
   const placeLines = (gridValue: number, x: number, y: number) => {
     const inputValues = inputValuesRef.current;
-    let nw = inputValues[y][x];
-    let ne = inputValues[y][x + 1];
-    let se = inputValues[y + 1][x + 1];
-    let sw = inputValues[y + 1][x];
+    const nw = inputValues[y][x];
+    const ne = inputValues[y][x + 1];
+    const se = inputValues[y + 1][x + 1];
+    const sw = inputValues[y + 1][x];
     let a, b, c, d;
 
     switch (gridValue) {
