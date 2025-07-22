@@ -31,7 +31,7 @@ const typeDefs = `
 
 const resolvers = {
   Query: {
-    photos: async (_: any, { status }: { status?: string }) => {
+    photos: async (_: {}, { status }: { status?: string }) => {
       let query = supabase.from('photos').select('*');
       if (status) query = query.eq('status', status);
       const { data, error } = await query;
@@ -40,7 +40,7 @@ const resolvers = {
     },
   },
   Mutation: {
-    approvePhoto: async (_: any, { id, lat, lng }: { id: string, lat: number, lng: number }) => {
+    approvePhoto: async (_: {}, { id, lat, lng }: { id: string, lat: number, lng: number }) => {
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'approved', lat, lng })
@@ -50,7 +50,7 @@ const resolvers = {
       if (error) throw new Error(error.message);
       return data;
     },
-    rejectPhoto: async (_: any, { id }: { id: string }) => {
+    rejectPhoto: async (_: {}, { id }: { id: string }) => {
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'rejected' })
