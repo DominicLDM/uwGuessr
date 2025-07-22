@@ -1,7 +1,7 @@
-
 import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import { createClient } from '@supabase/supabase-js';
+import { NextRequest } from 'next/server';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -65,5 +65,12 @@ const resolvers = {
 
 const server = new ApolloServer({ typeDefs, resolvers });
 
-export const GET = startServerAndCreateNextHandler(server);
-export const POST = startServerAndCreateNextHandler(server);
+const handler = startServerAndCreateNextHandler(server);
+
+export async function GET(request: NextRequest) {
+  return handler(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handler(request);
+}
