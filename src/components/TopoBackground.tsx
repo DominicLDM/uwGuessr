@@ -14,7 +14,7 @@ const binaryToType = (nw: number, ne: number, se: number, sw: number) => {
 };
 // Mouse position ref will be declared inside the component
 import React, { useRef, useEffect } from 'react';
-// @ts-expect-error
+// @ts-expect-error Perlin noise library has no types
 import * as ChriscoursesPerlinNoise from '@chriscourses/perlin-noise';
 
 
@@ -51,6 +51,7 @@ const TopoBackground: React.FC = () => {
       }
       cancelAnimationFrame(frameId);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
