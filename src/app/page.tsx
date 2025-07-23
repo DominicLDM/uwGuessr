@@ -46,15 +46,25 @@ export default function Component() {
           <div className="relative inline-block">
             <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-3">
               <span className="text-yellow-500">uw</span>
-              <span className="text-slate-900">{isGooseMode ? "Geesr" : "Guessr"}</span>
+              <span className="text-black">{isGooseMode ? "Geesr" : "Guessr"}</span>
             </h1>
           </div>
 
-          <div className="flex justify-center mb-6">
-            <div className="h-1 w-24 bg-gradient-to-r from-yellow-400 to-yellow-400 rounded-full" />
+          <div className="flex justify-center -mb-28 -mt-34">
+            <img
+              src="/underline.svg"
+              alt="Brush stroke underline"
+              className="block mx-auto w-[80%] max-w-[500px] -mt-2"
+              style={{ 
+                height: '330px', 
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.1)) blur(0.3px)'
+              }}
+              aria-hidden="true"
+            />
           </div>
 
-          <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-slate-600">
+          <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-slate-900">
             Get ready to explore the &apos;Loo!
           </p>
         </div>
@@ -104,7 +114,7 @@ export default function Component() {
           <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors">
             About
           </Link>
-          <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors">
+          <Link href="https://www.instagram.com/dom_ldm/" className="text-slate-900 hover:text-yellow-500 transition-colors">
             Contact
           </Link>
           <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors">
