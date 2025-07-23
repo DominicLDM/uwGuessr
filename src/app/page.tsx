@@ -44,19 +44,20 @@ export default function Component() {
         {/* Logo Section */}
         <div className="text-center mb-8 relative z-10">
           <div className="relative inline-block">
-            <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-3">
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-2">
               <span className="text-yellow-500">uw</span>
               <span className="text-black">{isGooseMode ? "Geesr" : "Guessr"}</span>
             </h1>
           </div>
 
-          <div className="flex justify-center -mb-28 -mt-34">
+          <div className="flex justify-center mb-5">
             <img
-              src="/underline.svg"
+              src="/underline.png"
               alt="Brush stroke underline"
-              className="block mx-auto w-[80%] max-w-[500px] -mt-2"
+              className="block mx-auto"
               style={{ 
-                height: '330px', 
+                height: '50px',
+                display: 'block',
                 objectFit: 'contain',
                 filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.1)) blur(0.3px)'
               }}
