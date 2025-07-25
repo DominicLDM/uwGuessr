@@ -22,6 +22,8 @@ const typeDefs = `
   }
   type Query {
     photos(status: String): [Photo]
+    randomPhotos(count: Int!): [Photo]
+    dailyPhotos(count: Int!): [Photo]
   }
   type Mutation {
     approvePhoto(id: ID!, lat: Float!, lng: Float!): Photo
@@ -37,6 +39,17 @@ const resolvers = {
       const { data, error } = await query;
       if (error) throw new Error(error.message);
       return data;
+    },
+    randomPhotos: async (_: unknown, { count }: { count: number }) => {
+      let query = supabase.from('photos').select('*').eq('status', 'approved').limit(count);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) {
+        // Shuffle and take the first 'count' items
+        const shuffled = data.sort(() => 0.5 - Math.random())
+        const randomPhotos = shuffled.slice(0, count)
+        return randomPhotos;
+      }
     },
   },
   Mutation: {
