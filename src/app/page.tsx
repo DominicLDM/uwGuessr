@@ -78,7 +78,7 @@ export default function Component() {
           <Button
             size="lg"
             className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
-            onClick={() => window.location.href = "/play?mode=random"}
+            onClick={() => window.location.href = "/play/random"}
           >
             <Play className="mr-2 h-5 w-5" />
             Start Playing
@@ -88,7 +88,7 @@ export default function Component() {
             variant="outline"
             size="lg"
             className="font-semibold px-8 py-3 text-lg rounded-xl border-2 border-black text-yellow-500 hover:bg-black hover:shadow-xl hover:text-yellow-500 transition-all duration-300 hover:scale-105 bg-black cursor-pointer"
-            onClick={() => window.location.href = "/play?mode=daily"}
+            onClick={() => window.location.href = "/play/daily"}
           >
             <Calendar className="mr-2 h-5 w-5" />
             Daily Challenge

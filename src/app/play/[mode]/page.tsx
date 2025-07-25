@@ -1,6 +1,6 @@
 "use client"
 
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from 'react'
 // import mapboxgl from 'mapbox-gl'
 import { useQuery, gql } from '@apollo/client';
@@ -51,8 +51,9 @@ status: string
 
 export default function PlayPage() {
     const [images, setImages] = useState<Photo[]>([]);
-    const searchParams = useSearchParams();
-    const mode = searchParams.get("mode"); // will be "random" or "daily"
+    
+    const params = useParams();
+    const { mode } = params; // will be "random" or "daily"
 
     const { data, loading, error } = useQuery(
         mode === "random" ? GET_RANDOM_PHOTOS : GET_DAILY_PHOTOS,
