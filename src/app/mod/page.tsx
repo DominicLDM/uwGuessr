@@ -80,7 +80,7 @@ function ModContent() {
         </button>
       </div>
       <div className="space-y-10">
-        {data?.photos?.map((photo: any) => (
+        {data?.photos?.map((photo: Photo) => (
           <ModerationCard key={photo.id} photo={photo} />
         ))}
       </div>
