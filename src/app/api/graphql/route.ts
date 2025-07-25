@@ -41,7 +41,7 @@ const resolvers = {
       return data;
     },
     randomPhotos: async (_: unknown, { count }: { count: number }) => {
-      let query = supabase.from('photos').select('*').eq('status', 'approved').limit(count);
+      const query = supabase.from('photos').select('*').eq('status', 'approved').limit(count);
       const { data, error } = await query;
       if (error) throw new Error(error.message);
       if (data && data.length > 0) {

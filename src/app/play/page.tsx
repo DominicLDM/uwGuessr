@@ -1,8 +1,8 @@
 "use client"
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from 'react'
-import mapboxgl from 'mapbox-gl'
+import { useEffect, useState } from 'react'
+// import mapboxgl from 'mapbox-gl'
 import { useQuery, gql } from '@apollo/client';
 
 const GET_RANDOM_PHOTOS = gql`
@@ -64,6 +64,8 @@ export default function PlayPage() {
             setImages(mode === "random" ? data.randomPhotos : data.dailyPhotos);
         }
     }, [data, mode]);
+
+    if (loading) return <main className="p-4">Loading...</main>;
 
     if (error) {
         return <main className="p-4 text-red-600">Error: {error.message}</main>;
