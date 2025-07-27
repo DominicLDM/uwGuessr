@@ -4,33 +4,33 @@
 import Image from "next/image"
 import React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, /* useEffect */ } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Play, Calendar, Trophy, Users, MapPin, Bird } from "lucide-react"
+// import { Card, CardContent } from "@/components/ui/card"
+// import { Badge } from "@/components/ui/badge"
+import { Play, Calendar, Bird } from "lucide-react"
 import Link from "next/link"
 import TopoBackground from "@/components/TopoBackground"
 
 export default function Component() {
-  const [mounted, setMounted] = useState(false)
-  const [currentStat, setCurrentStat] = useState(0)
+  const [mounted, /* setMounted */] = useState(false)
+  // const [currentStat, setCurrentStat] = useState(0)
   const [isGooseMode, setIsGooseMode] = useState(false)
 
-  const stats = [
-    { label: "Players", value: "2,847", icon: Users },
-    { label: "Games Played", value: "15,293", icon: Play },
-    { label: "Locations", value: "500+", icon: MapPin },
-    { label: "Champions", value: "127", icon: Trophy },
-  ]
+  // const stats = [
+  //   { label: "Players", value: "2,847", icon: Users },
+  //   { label: "Games Played", value: "15,293", icon: Play },
+  //   { label: "Locations", value: "500+", icon: MapPin },
+  //   { label: "Champions", value: "127", icon: Trophy },
+  // ]
 
-  useEffect(() => {
-    setMounted(true)
-    const interval = setInterval(() => {
-      setCurrentStat((prev) => (prev + 1) % stats.length)
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [])
+  // useEffect(() => {
+  //   setMounted(true)
+  //   const interval = setInterval(() => {
+  //     setCurrentStat((prev) => (prev + 1) % stats.length)
+  //   }, 2000)
+  //   return () => clearInterval(interval)
+  // }, [])
 
   if (!mounted) return null
 
@@ -46,9 +46,19 @@ export default function Component() {
         {/* Logo Section */}
         <div className="text-center mb-8 relative z-10">
           <div className="relative inline-block">
-            <h1 className="text-7xl font-black tracking-tight mb-2">
-              <span className="text-yellow-500">uw</span>
-              <span className="text-black">{isGooseMode ? "Geesr" : "Guessr"}</span>
+            <h1 className="text-[4.3rem] md:text-[7rem] font-black tracking-tight -mb-4 md:-mb-7 flex items-center justify-center">
+              <span className="text-yellow-500 mr-0.5">uw</span>
+              <span className="text-black flex items-center">
+                {isGooseMode ? (
+                  <>
+                    <Image src="/G.svg" alt="G" width={56} height={56} className="inline-block align-middle md:w-[88px] md:h-[96px] w-[96px] h-[60px]" />eesr
+                  </>
+                ) : (
+                  <>
+                    <Image src="/G.svg" alt="G" width={56} height={56} className="inline-block align-middle md:w-[96px] md:h-[96px] w-[60px] h-[60px]" />uessr
+                  </>
+                )}
+              </span>
             </h1>
           </div>
 
@@ -56,9 +66,9 @@ export default function Component() {
             <Image
               src="/underline.png"
               alt="Brush stroke underline"
-              width={280}
-              height={50}
-              className="block mx-auto"
+              width={350}
+              height={70}
+              className="block mx-auto md:w-[350px] md:h-[70px] w-[250px] h-[50px]"
               style={{
                 objectFit: 'contain',
                 filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.1)) blur(0.3px)'
@@ -94,9 +104,8 @@ export default function Component() {
             Daily Challenge
           </Button>
         </div>
-
         {/* Stats Section */}
-        <Card className="w-full max-w-sm transition-all duration-500 bg-white/90 border-black-200 backdrop-blur-4px relative z-5 shadow-lg hover:shadow-xl">
+        {/* <Card className="w-full max-w-sm transition-all duration-500 bg-white/90 border-black-200 backdrop-blur-4px relative z-5 shadow-lg hover:shadow-xl">
           <CardContent className="p-4">
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
@@ -111,7 +120,7 @@ export default function Component() {
               <div className="text-sm text-slate-700">{stats[currentStat].label}</div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </main>
 
       {/* Footer */}
