@@ -13,26 +13,7 @@ import Link from "next/link"
 import TopoBackground from "@/components/TopoBackground"
 
 export default function Component() {
-  const [mounted, /* setMounted */] = useState(false)
-  // const [currentStat, setCurrentStat] = useState(0)
   const [isGooseMode, setIsGooseMode] = useState(false)
-
-  // const stats = [
-  //   { label: "Players", value: "2,847", icon: Users },
-  //   { label: "Games Played", value: "15,293", icon: Play },
-  //   { label: "Locations", value: "500+", icon: MapPin },
-  //   { label: "Champions", value: "127", icon: Trophy },
-  // ]
-
-  // useEffect(() => {
-  //   setMounted(true)
-  //   const interval = setInterval(() => {
-  //     setCurrentStat((prev) => (prev + 1) % stats.length)
-  //   }, 2000)
-  //   return () => clearInterval(interval)
-  // }, [])
-
-  if (!mounted) return null
 
   return (
     <div className="relative min-h-svh flex flex-col text-slate-900" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
