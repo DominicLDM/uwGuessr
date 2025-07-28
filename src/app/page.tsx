@@ -32,11 +32,11 @@ export default function Component() {
               <span className="text-black flex items-center">
                 {isGooseMode ? (
                   <>
-                    <Image src="/G.svg" alt="G" width={56} height={56} className="inline-block align-middle md:w-[96px] md:h-[96px] w-[60px] h-[60px]" />eesr
+                    <img src="/G.svg" alt="G" className="inline-block align-middle md:w-[96px] md:h-[96px] w-[60px] h-[60px]" />eesr
                   </>
                 ) : (
                   <>
-                    <Image src="/G.svg" alt="G" width={56} height={56} className="inline-block align-middle md:w-[96px] md:h-[96px] w-[60px] h-[60px]" />uessr
+                    <img src="/G.svg" alt="G" className="inline-block align-middle md:w-[96px] md:h-[96px] w-[60px] h-[60px]" />uessr
                   </>
                 )}
               </span>

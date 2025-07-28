@@ -79,13 +79,13 @@ export default function PlayPage() {
     }
 
     return (
-        <main className="h-screen w-screen flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
+        <main className="h-svh w-screen flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
             <header className="flex w-screen justify-between items-center p-4">
                 <div className="flex items-center cursor-pointer" onClick={() => window.location.href = "/"}>
                     <h1 className="text-4xl sm:text-6xl font-bold font-black tracking-tight flex items-center justify-center -mt-1 sm:-mt-3">
                         <span className="text-yellow-500 mr-0.5">uw</span>
                         <span className="text-black flex items-center">
-                            <Image src="/G.svg" alt="G" width={32} height={32} className="inline-block align-middle mx-0 -mr-0.25 sm:w-[52px] sm:h-[52px] w-[32px] h-[32px]" />
+                            <img src="/G.svg" alt="G" className="inline-block align-middle mx-0 -mr-0.25 sm:w-[52px] sm:h-[52px] w-[32px] h-[32px]" />
                             uessr
                         </span>
                     </h1>
