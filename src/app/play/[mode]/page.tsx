@@ -85,7 +85,7 @@ export default function PlayPage() {
                     <h1 className="text-4xl sm:text-6xl font-bold font-black tracking-tight flex items-center justify-center -mt-1 sm:-mt-3">
                         <span className="text-yellow-500 mr-0.5">uw</span>
                         <span className="text-black flex items-center">
-                            <img src="/G.svg" alt="G" className="inline-block align-middle mx-0 -mr-0.25 sm:w-[52px] sm:h-[52px] w-[32px] h-[32px]" />
+                            <img src="/G.svg" alt="G" className="inline-block align-middle mx-0 -mr-0.25 sm:w-[52px] sm:h-[52px] w-[28px] h-[28px]" />
                             uessr
                         </span>
                     </h1>

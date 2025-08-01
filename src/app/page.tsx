@@ -32,31 +32,11 @@ export default function Component() {
               <span className="text-black flex items-center">
                 {isGooseMode ? (
                   <>
-                    <div 
-                      className="w-[60px] h-[60px] md:w-[96px] md:h-[96px] bg-no-repeat bg-center bg-contain flex-shrink-0"
-                      style={{
-                        backgroundImage: "url('/G.svg')",
-                        backgroundSize: 'contain',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat'
-                      }}
-                      aria-label="G"
-                    />
-                    eesr
+                    <img src="/G.svg" alt="G" className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]" />eesr
                   </>
                 ) : (
                   <>
-                    <div 
-                      className="w-[60px] h-[60px] md:w-[96px] md:h-[96px] bg-no-repeat bg-center bg-contain flex-shrink-0"
-                      style={{
-                        backgroundImage: "url('/G.svg')",
-                        backgroundSize: 'contain',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat'
-                      }}
-                      aria-label="G"
-                    />
-                    uessr
+                    <img src="/G.svg" alt="G" className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]" />uessr
                   </>
                 )}
               </span>
