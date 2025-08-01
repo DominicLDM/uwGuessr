@@ -1,17 +1,5 @@
 "use client"
 
-type Photo = {
-id: string;
-url: string;
-lat: number | null;
-lng: number | null;
-building: string;
-floor: number;
-added_by: string;
-created_at: string;
-status: string;
-};
-
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import { useQuery, gql } from "@apollo/client";
 import ModerationCard from '@/components/ModerationCard';
@@ -32,11 +20,17 @@ query GetPhotos($status: String) {
 }
 `;
 
-function ModContent() {
-  const { isAuthenticated, user, loginWithRedirect, isLoading, logout } = useAuth0();
-  const { data, loading: photosLoading, error } = useQuery(GET_PHOTOS, { variables: { status: "pending" } });
+import { useState, useEffect } from "react";
 
-  if (isLoading) return <div>Loading...</div>;
+function ModContent() {
+  const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
+  const { data, error, refetch } = useQuery(GET_PHOTOS, { variables: { status: "pending" } });
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [data?.photos?.length]);
+
   if (!isAuthenticated) {
     return (
       <main className="p-4 flex flex-col items-center justify-center min-h-screen">
@@ -65,8 +59,15 @@ function ModContent() {
     );
   }
 
-  if (photosLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
+
+  const photos = data?.photos || [];
+  const currentPhoto = photos[currentIndex];
+
+  const handleModerated = async () => {
+    await refetch();
+    setCurrentIndex(0);
+  };
 
   return (
     <main className="p-4">
@@ -80,9 +81,11 @@ function ModContent() {
         </button>
       </div>
       <div className="space-y-10">
-        {data?.photos?.map((photo: Photo) => (
-          <ModerationCard key={photo.id} photo={photo} />
-        ))}
+        {currentPhoto ? (
+          <ModerationCard key={currentPhoto.id} photo={currentPhoto} onModerated={handleModerated} />
+        ) : (
+          <div className="text-center text-lg text-green-700 font-semibold py-20">No more pending photos to moderate! 🎉</div>
+        )}
       </div>
     </main>
   );

@@ -39,66 +39,80 @@ status: string
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
-export default function ModerationCard({ photo }: { photo: Photo }) {
-	const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(null);
-	const mapContainer = useRef<HTMLDivElement>(null);
-	const [approvePhoto] = useMutation(APPROVE_PHOTO);
-	const [rejectPhoto] = useMutation(REJECT_PHOTO);
+type ModerationCardProps = { photo: Photo; onModerated?: () => void };
+
+export default function ModerationCard({ photo, onModerated }: ModerationCardProps) {
+  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
+	photo.lat != null && photo.lng != null ? { lat: photo.lat, lng: photo.lng } : null
+  );
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const [approvePhoto] = useMutation(APPROVE_PHOTO);
+  const [rejectPhoto] = useMutation(REJECT_PHOTO);
 
 	useEffect(() => {
-		if (!mapContainer.current) return;
+	if (!mapContainer.current) return;
 
-		const map = new mapboxgl.Map({
-			container: mapContainer.current,
-			style: 'mapbox://styles/mapbox/standard',
-			center: [-80.5417, 43.4723], // Waterloo, ON
-			zoom: 16,
-			pitch: 0,
-			bearing: -20,
-			antialias: true,
-		});
+	const map = new mapboxgl.Map({
+	  container: mapContainer.current,
+	  style: 'mapbox://styles/mapbox/standard',
+	  center: photo.lat != null && photo.lng != null ? [photo.lng, photo.lat] : [-80.5417, 43.4723],
+	  zoom: 16,
+	  pitch: 0,
+	  bearing: -20,
+	  antialias: true,
+	});
 
-		map.on('load', () => {
-			map.addLayer({
-				id: '3d-buildings',
-				source: 'composite',
-				'source-layer': 'building',
-				filter: ['==', 'extrude', 'true'],
-				type: 'fill-extrusion',
-				minzoom: 15,
-				paint: {
-					'fill-extrusion-color': '#aaa',
-					'fill-extrusion-height': ['get', 'height'],
-					'fill-extrusion-base': ['get', 'min_height'],
-					'fill-extrusion-opacity': 0.6,
-				},
-			});
-		});
-		let currentMarker: mapboxgl.Marker | null = null;
+	map.on('load', () => {
+	  map.addLayer({
+		id: '3d-buildings',
+		source: 'composite',
+		'source-layer': 'building',
+		filter: ['==', 'extrude', 'true'],
+		type: 'fill-extrusion',
+		minzoom: 15,
+		paint: {
+		  'fill-extrusion-color': '#aaa',
+		  'fill-extrusion-height': ['get', 'height'],
+		  'fill-extrusion-base': ['get', 'min_height'],
+		  'fill-extrusion-opacity': 0.6,
+		},
+	  });
 
-		map.on('click', (e) => {
-			const { lat, lng } = e.lngLat;
-			if (currentMarker) {
-				currentMarker.remove();
-			}
-			const newMarker = new mapboxgl.Marker({ color: 'red' }).setLngLat([lng, lat]).addTo(map);
-			currentMarker = newMarker;
-			setMarker({ lat, lng });
-		});
+	  // Place initial marker if photo has lat/lng
+	  if (photo.lat != null && photo.lng != null) {
+		const initialMarker = new mapboxgl.Marker({ color: 'red' })
+		  .setLngLat([photo.lng, photo.lat])
+		  .addTo(map);
+		// Keep reference to remove if changed
+		currentMarker = initialMarker;
+	  }
+	});
 
-		return () => map.remove();
-	}, [photo.id]);
+	let currentMarker: mapboxgl.Marker | null = null;
 
-	const handleApprove = async () => {
-		if (!marker) return alert('Select a location first.');
-		await approvePhoto({ variables: { id: photo.id, lat: marker.lat, lng: marker.lng } });
-		window.location.reload(); // simple reload to refresh list
-	};
+	map.on('click', (e) => {
+	  const { lat, lng } = e.lngLat;
+	  if (currentMarker) {
+		currentMarker.remove();
+	  }
+	  const newMarker = new mapboxgl.Marker({ color: 'red' }).setLngLat([lng, lat]).addTo(map);
+	  currentMarker = newMarker;
+	  setMarker({ lat, lng });
+	});
 
-	const handleReject = async () => {
-		await rejectPhoto({ variables: { id: photo.id } });
-		window.location.reload();
-	};
+	return () => map.remove();
+  }, [photo.id, photo.lat, photo.lng]);
+
+  const handleApprove = async () => {
+	if (!marker) return alert('Select a location first.');
+	await approvePhoto({ variables: { id: photo.id, lat: marker.lat, lng: marker.lng } });
+	if (onModerated) onModerated();
+  };
+
+  const handleReject = async () => {
+	await rejectPhoto({ variables: { id: photo.id } });
+	if (onModerated) onModerated();
+  };
 
 	return (
 		<div className="border p-4 rounded shadow">

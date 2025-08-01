@@ -113,7 +113,7 @@ export default function Component() {
           <Link href="https://www.instagram.com/dom_ldm/" className="text-slate-900 hover:text-yellow-500 transition-colors">
             Contact
           </Link>
-          <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors">
+          <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors" onClick={() => window.location.href = "/upload"}>
             Submit Photos
           </Link>
           <button
