@@ -152,6 +152,7 @@ export default function PlayPage() {
                                     alt="Level"
                                     width={1920}
                                     height={1080}
+                                    priority
                                     className="block w-auto h-auto max-w-none max-h-none object-contain"
                                     style={{
                                         maxWidth: 'calc(100vw)',
