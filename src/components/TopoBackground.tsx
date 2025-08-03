@@ -58,7 +58,6 @@ const TopoBackground: React.FC = () => {
       frameId = requestAnimationFrame(animateWrapper);
     };
     frameId = requestAnimationFrame(animateWrapper);
-    
     // Cleanup
     const canvas = canvasRef.current;
     return () => {
