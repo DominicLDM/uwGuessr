@@ -41,15 +41,29 @@ const resolvers = {
       return data;
     },
     randomPhotos: async (_: unknown, { count }: { count: number }) => {
-      const query = supabase.from('photos').select('*').eq('status', 'approved').limit(count);
-      const { data, error } = await query;
+      // Get all approved photos and shuffle them
+      const { data, error } = await supabase
+        .from('photos')
+        .select('id, url, lat, lng')
+        .eq('status', 'approved');
+      
       if (error) throw new Error(error.message);
-      if (data && data.length > 0) {
-        // Shuffle and take the first 'count' items
-        const shuffled = data.sort(() => 0.5 - Math.random())
-        const randomPhotos = shuffled.slice(0, count)
-        return randomPhotos;
-      }
+      if (!data || data.length === 0) return [];
+      
+      // Shuffle the array and take the first 'count' items
+      const shuffled = data.sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, count);
+    },
+    dailyPhotos: async (_: unknown, { count }: { count: number }) => {
+      // Placeholder for daily photos - same as random for now
+      const { data, error } = await supabase
+        .from('photos')
+        .select('id, url, lat, lng')
+        .eq('status', 'approved')
+        .limit(count);
+      
+      if (error) throw new Error(error.message);
+      return data || [];
     },
   },
   Mutation: {

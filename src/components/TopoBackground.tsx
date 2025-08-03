@@ -20,6 +20,7 @@ import * as ChriscoursesPerlinNoise from '@chriscourses/perlin-noise';
 
 const TopoBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isVisibleRef = useRef(true); // Track if component is visible
 
   // Mutable state using useRef
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -37,17 +38,34 @@ const TopoBackground: React.FC = () => {
   useEffect(() => {
     setupCanvas();
     let frameId: number;
+    
+    // Intersection Observer to pause animation when not visible
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisibleRef.current = entry.isIntersecting;
+      },
+      { threshold: 0 }
+    );
+    
+    if (canvasRef.current) {
+      observer.observe(canvasRef.current);
+    }
+    
     const animateWrapper = () => {
-      animate();
+      if (isVisibleRef.current) {
+        animate();
+      }
       frameId = requestAnimationFrame(animateWrapper);
     };
     frameId = requestAnimationFrame(animateWrapper);
+    
     // Cleanup
     const canvas = canvasRef.current;
     return () => {
       window.removeEventListener('resize', canvasSize);
       if (canvas) {
         canvas.removeEventListener('mousemove', handleMouseMove);
+        observer.unobserve(canvas);
       }
       cancelAnimationFrame(frameId);
     };

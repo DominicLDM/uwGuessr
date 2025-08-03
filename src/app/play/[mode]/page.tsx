@@ -59,6 +59,7 @@ export default function PlayPage() {
     const [currentRound, /* setCurrentRound */] = useState(1);
     const [score, /* setScore */] = useState(10000);
     const [imageLoaded, setImageLoaded] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     const params = useParams();
     const { mode } = params; // will be "random" or "daily"
@@ -73,6 +74,13 @@ export default function PlayPage() {
             setImages(mode === "random" ? data.randomPhotos : data.dailyPhotos);
         }
     }, [data, mode]);
+
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth <= 640);
+        check();
+        window.addEventListener("resize", check);
+        return () => window.removeEventListener("resize", check);
+    }, []);
 
     if (error) {
         return <main className="p-4 text-red-600">Error: {error.message}</main>;
@@ -136,7 +144,15 @@ export default function PlayPage() {
                             }}
                         >
                             {images[currentRound - 1]?.url ? (
-                                <TransformWrapper
+                                <>
+                                    {/* Simple Loading Skeleton */}
+                                    {!imageLoaded && (
+                                        <div className="absolute inset-0 bg-gray-200 animate-pulse">
+                                            <div className="h-full w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+                                        </div>
+                                    )}
+                                    
+                                    <TransformWrapper
                                 minScale={1}
                                 maxScale={4}
                                 limitToBounds={true}
@@ -145,6 +161,7 @@ export default function PlayPage() {
                                 doubleClick={{ mode: 'toggle' }}
                                 panning={{ velocityDisabled: false }}
                                 smooth={true}
+                                disabled={isMobile ? true : false}
                                 >
                                 <TransformComponent>
                                 <Image
@@ -152,7 +169,10 @@ export default function PlayPage() {
                                     alt="Level"
                                     width={1920}
                                     height={1080}
-                                    className="block w-auto h-auto max-w-none max-h-none object-contain"
+                                    priority={currentRound === 1}
+                                    className={`block w-auto h-auto max-w-none max-h-none object-contain transition-opacity duration-500 ${
+                                        imageLoaded ? 'opacity-100' : 'opacity-0'
+                                    }`}
                                     style={{
                                         maxWidth: 'calc(100vw)',
                                         maxHeight: 'calc(100vh - 200px)',
@@ -164,6 +184,7 @@ export default function PlayPage() {
                                 />
                                 </TransformComponent>
                                 </TransformWrapper>
+                                </>
                             ) : (
                                 <div className="w-96 h-72 flex items-center justify-center animate-pulse rounded-2xl">
                                     <div className="w-24 h-24 rounded" />

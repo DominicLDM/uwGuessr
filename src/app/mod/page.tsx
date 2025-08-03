@@ -44,8 +44,8 @@ function ModContent() {
       </main>
     );
   }
-  // Only allow my email to access the moderation dashboard
-  if (user?.email !== "dodolem0306@gmail.com") {
+  // Only allow admin email to access the moderation dashboard
+  if (user?.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
     return (
       <main className="p-4 flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-2xl font-bold mb-4">Access Denied</h1>

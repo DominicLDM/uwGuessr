@@ -5,6 +5,7 @@ import Image from "next/image"
 import React from "react"
 
 import { useState, /* useEffect */ } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 // import { Card, CardContent } from "@/components/ui/card"
 // import { Badge } from "@/components/ui/badge"
@@ -14,6 +15,13 @@ import TopoBackground from "@/components/TopoBackground"
 
 export default function Component() {
   const [isGooseMode, setIsGooseMode] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
+  const router = useRouter()
+
+  const handleNavigation = (path: string) => {
+    setIsNavigating(true)
+    router.push(path)
+  }
 
   return (
     <div className="relative min-h-svh flex flex-col text-slate-900" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
@@ -68,8 +76,9 @@ export default function Component() {
         <div className="flex flex-col sm:flex-row gap-4 mb-8 relative z-10">
           <Button
             size="lg"
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
-            onClick={() => window.location.href = "/play/random"}
+            className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => handleNavigation("/play/random")}
+            disabled={isNavigating}
           >
             <Play className="mr-2 h-5 w-5" />
             Start Playing
@@ -78,8 +87,9 @@ export default function Component() {
           <Button
             variant="outline"
             size="lg"
-            className="font-semibold px-8 py-3 text-lg rounded-xl border-2 border-black text-yellow-500 hover:bg-black hover:shadow-xl hover:text-yellow-500 transition-all duration-300 hover:scale-105 bg-black cursor-pointer"
-            onClick={() => window.location.href = "/play/daily"}
+            className="font-semibold px-8 py-3 text-lg rounded-xl border-2 border-black text-yellow-500 hover:bg-black hover:shadow-xl hover:text-yellow-500 transition-all duration-300 hover:scale-105 bg-black cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => handleNavigation("/play/daily")}
+            disabled={isNavigating}
           >
             <Calendar className="mr-2 h-5 w-5" />
             Daily Challenge
