@@ -4,8 +4,9 @@
 import Image from "next/image"
 import React from "react"
 
-import { useState, /* useEffect */ } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useApolloClient, gql } from '@apollo/client'
 import { Button } from "@/components/ui/button"
 // import { Card, CardContent } from "@/components/ui/card"
 // import { Badge } from "@/components/ui/badge"
@@ -13,10 +14,73 @@ import { Play, Calendar, Bird } from "lucide-react"
 import Link from "next/link"
 import TopoBackground from "@/components/TopoBackground"
 
+// GraphQL queries for prewarming
+const GET_RANDOM_PHOTOS = gql`
+query GetRandomPhotos($count: Int!) {
+        randomPhotos(count: $count) {
+        id
+        url
+        lat
+        lng
+        building
+        floor
+        added_by
+        created_at
+        status
+        }
+}
+`;
+
+const GET_DAILY_PHOTOS = gql`
+query GetDailyPhotos($count: Int!) {
+        dailyPhotos(count: $count) {
+        id
+        url
+        lat
+        lng
+        building
+        floor
+        added_by
+        created_at
+        status
+        }
+}
+`;
+
+// Lightweight ping query to wake up GraphQL server
+const PING_QUERY = gql`
+  query Ping {
+    __typename
+  }
+`;
+
 export default function Component() {
   const [isGooseMode, setIsGooseMode] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
   const router = useRouter()
+  const client = useApolloClient()
+
+  // Prewarm GraphQL connection when homepage loads
+  useEffect(() => {
+    // Warm up the connection with a ping
+    client.query({ 
+      query: PING_QUERY,
+      fetchPolicy: 'no-cache'
+    }).catch(err => console.log('Homepage ping failed:', err));
+
+    // Prefetch both query types to warm up the cache and server
+    client.query({
+      query: GET_RANDOM_PHOTOS,
+      variables: { count: 5 },
+      fetchPolicy: 'cache-first'
+    }).catch(err => console.log('Random photos prefetch failed:', err));
+
+    client.query({
+      query: GET_DAILY_PHOTOS,
+      variables: { count: 5 },
+      fetchPolicy: 'cache-first'
+    }).catch(err => console.log('Daily photos prefetch failed:', err));
+  }, [client]);
 
   const handleNavigation = (path: string) => {
     setIsNavigating(true)
