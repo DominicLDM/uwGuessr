@@ -54,7 +54,7 @@ query GetDailyPhotos($count: Int!) {
 export default function PlayPage() {
     const [images, setImages] = useState<Photo[]>([]);
     const [imageLoaded, setImageLoaded] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState<boolean | null>(null); // Start as null to prevent flickering
     
     const { gameState, actions } = useGameState()
 
@@ -190,24 +190,26 @@ export default function PlayPage() {
                 </div>
                 
                 {/* Interactive Game Map with Submit Button */}
-                { !isMobile ? (
-                    <GameMap 
-                        onPlaceGuess={actions.placeGuess}
-                        onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
-                        userGuess={gameState.userGuess}
-                        isExpanded={gameState.isMapExpanded}
-                        onToggleExpanded={actions.toggleMapExpanded}
-                        disabled={gameState.gamePhase === 'results'}
-                    />
-                ) : (
-                    <GameMapMobile 
-                        onPlaceGuess={actions.placeGuess}
-                        onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
-                        userGuess={gameState.userGuess}
-                        isExpanded={gameState.isMapExpanded}
-                        onToggleExpanded={actions.toggleMapExpanded}
-                        disabled={gameState.gamePhase === 'results'}
-                    />
+                {isMobile !== null && (
+                    !isMobile ? (
+                        <GameMap 
+                            onPlaceGuess={actions.placeGuess}
+                            onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                            userGuess={gameState.userGuess}
+                            isExpanded={gameState.isMapExpanded}
+                            onToggleExpanded={actions.toggleMapExpanded}
+                            disabled={gameState.gamePhase === 'results'}
+                        />
+                    ) : (
+                        <GameMapMobile 
+                            onPlaceGuess={actions.placeGuess}
+                            onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                            userGuess={gameState.userGuess}
+                            isExpanded={gameState.isMapExpanded}
+                            onToggleExpanded={actions.toggleMapExpanded}
+                            disabled={gameState.gamePhase === 'results'}
+                        />
+                    )
                 )}
                 
                 {/* Results Modal */}
