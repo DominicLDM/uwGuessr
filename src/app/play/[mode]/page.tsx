@@ -3,11 +3,11 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from 'react'
 import { useQuery, gql } from '@apollo/client';
-import Image from "next/image"
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useGameState } from '@/hooks/useGameState'
 import { Photo } from '@/types/game'
 import GameMap from '@/components/GameMap'
+import GameMapMobile from '@/components/GameMapMobile';
 
 const GET_RANDOM_PHOTOS = gql`
 query GetRandomPhotos($count: Int!) {
@@ -132,7 +132,7 @@ export default function PlayPage() {
                 {/* Image container - 80% width desktop, 95% mobile */}
                 <div className="">
                     {/* Image positioned at leftmost part of container */}
-                    <div className="h-full w-screen flex items-center">
+                    <div className="h-full w-screen flex items-center sm:items-center items-start sm:pt-0 pt-12">
                         <div
                             className={`relative rounded-2xl m-4 sm:m-6 overflow-hidden bg-white ${imageLoaded ? 'border-4 border-black' : ''}`}
                             style={{
@@ -162,12 +162,9 @@ export default function PlayPage() {
                                 disabled={isMobile ? true : false}
                                 >
                                 <TransformComponent>
-                                <Image
+                                <img
                                     src={images[gameState.currentRound - 1].url}
                                     alt="Level"
-                                    width={1920}
-                                    height={1080}
-                                    priority={gameState.currentRound === 1}
                                     className={`block w-auto h-auto max-w-none max-h-none object-contain transition-opacity duration-500 ${
                                         imageLoaded ? 'opacity-100' : 'opacity-0'
                                     }`}
@@ -193,14 +190,25 @@ export default function PlayPage() {
                 </div>
                 
                 {/* Interactive Game Map with Submit Button */}
-                <GameMap 
-                  onPlaceGuess={actions.placeGuess}
-                  onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
-                  userGuess={gameState.userGuess}
-                  isExpanded={gameState.isMapExpanded}
-                  onToggleExpanded={actions.toggleMapExpanded}
-                  disabled={gameState.gamePhase === 'results'}
-                />
+                { !isMobile ? (
+                    <GameMap 
+                        onPlaceGuess={actions.placeGuess}
+                        onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                        userGuess={gameState.userGuess}
+                        isExpanded={gameState.isMapExpanded}
+                        onToggleExpanded={actions.toggleMapExpanded}
+                        disabled={gameState.gamePhase === 'results'}
+                    />
+                ) : (
+                    <GameMapMobile 
+                        onPlaceGuess={actions.placeGuess}
+                        onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                        userGuess={gameState.userGuess}
+                        isExpanded={gameState.isMapExpanded}
+                        onToggleExpanded={actions.toggleMapExpanded}
+                        disabled={gameState.gamePhase === 'results'}
+                    />
+                )}
                 
                 {/* Results Modal */}
                 {gameState.showResults && (

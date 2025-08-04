@@ -41,6 +41,16 @@ export default function UploadPage() {
 
         mapRef.current = map;
 
+        // Set mapLoaded to true when map is ready
+        map.on('load', () => {
+            setMapLoaded(true);
+        });
+
+        map.on('error', (e) => {
+            console.error('Map error:', e);
+            setMapLoaded(true);
+        });
+
         let currentMarker: mapboxgl.Marker | null = null;
 
         map.on('click', (e) => {

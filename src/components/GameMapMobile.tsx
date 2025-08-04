@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 // import { useGameState } from '@/hooks/useGameState'
 import mapboxgl from 'mapbox-gl'
+import { ChevronUp, X } from 'lucide-react'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
@@ -27,9 +28,7 @@ export default function GameMap({
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markerRef = useRef<mapboxgl.Marker | null>(null)
-  const [collapseTimeout, setCollapseTimeout] = useState<NodeJS.Timeout | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [mapDetail, setMapDetail] = useState<'high' | 'low'>('high')
 
   // Initialize map
   useEffect(() => {
@@ -37,7 +36,7 @@ export default function GameMap({
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      style: mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12',
+      style: 'mapbox://styles/mapbox/standard',
       center: [-80.5417, 43.4723], // UW coordinates
       zoom: 16,
       pitch: 0,
@@ -81,7 +80,7 @@ export default function GameMap({
       console.log('Cleaning up map')
       map.remove()
     }
-  }, [disabled, onPlaceGuess, mapDetail])
+  }, [disabled, onPlaceGuess])
 
   // Handle map resize when container changes
   useEffect(() => {
@@ -111,14 +110,6 @@ export default function GameMap({
     }
   }, [isExpanded, mapLoaded])
 
-  // Handle map style change after map is loaded
-  useEffect(() => {
-    if (mapRef.current && mapLoaded) {
-      const style = mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12';
-      mapRef.current.setStyle(style);
-    }
-  }, [mapDetail, mapLoaded])
-
   // Handle userGuess prop changes
   useEffect(() => {
     if (!mapRef.current || !userGuess) return
@@ -136,45 +127,43 @@ export default function GameMap({
     markerRef.current = marker
   }, [userGuess])
 
-  // Handle delayed collapse
-  const handleMouseEnter = () => {
-    if (collapseTimeout) {
-      clearTimeout(collapseTimeout)
-      setCollapseTimeout(null)
-    }
-    if (!isExpanded) {
-      onToggleExpanded()
-    }
-  }
-
-  const handleMouseLeave = () => {
-    if (isExpanded) {
-      const timeout = setTimeout(() => {
-        onToggleExpanded()
-      }, 500) // 500ms delay
-      setCollapseTimeout(timeout)
-    }
-  }
-
 return (
-  <div 
-    className={`
-      absolute bottom-8 right-8 z-10 
-      flex flex-col
-      transition-all duration-300 ease-in-out
-      ${disabled ? 'opacity-50' : ''}
-    `}
-    onMouseEnter={handleMouseEnter}
-    onMouseLeave={handleMouseLeave}
-  >
-    {/* Map Container */}
-    <div 
+  <>
+    {/* Show Map Button - Only visible when map is closed */}
+    {!isExpanded && (
+      <div 
+        className={`
+          fixed bottom-4 left-1/2 transform -translate-x-1/2 z-30
+          ${disabled ? 'opacity-50' : ''}
+        `}
+      >
+        <button
+          className="w-[95vw] max-w-md mx-auto px-0 py-3 rounded-xl font-bold text-lg bg-yellow-400 hover:bg-yellow-500 text-black border-4 border-black shadow-lg transition-all duration-200 flex items-center justify-center"
+          onClick={onToggleExpanded}
+        >
+          <ChevronUp className="w-6 h-6 mr-2" />
+          Show Map
+        </button>
+      </div>
+    )}
+    
+    {/* Slide-up Map Container */}
+    {isExpanded && (
+      <div
+        className="fixed inset-0 z-40 bg-black/20"
+        onClick={onToggleExpanded}
+      />
+    )}
+    
+    <div
       className={`
-        border-4 border-black rounded-xl shadow-2xl
-        transition-all duration-300 ease-in-out
-        ${isExpanded ? 'w-160 h-128' : 'w-80 h-64'}
-        relative overflow-hidden
+        fixed left-0 bottom-0 w-full z-50
+        transition-all duration-300
+        ${isExpanded ? 'h-[60vh] opacity-100' : 'h-0 opacity-0 pointer-events-none'}
         bg-gray-200
+        rounded-t-xl
+        shadow-2xl
+        overflow-hidden
       `}
     >
       {/* Loading overlay */}
@@ -198,37 +187,31 @@ return (
         }}
       />
 
-      {/* Change quality */}
-      <button 
-      onClick={() => setMapDetail(mapDetail === 'high' ? 'low' : 'high')} 
-        className="absolute top-2 right-2 bg-black/70 text-white p-1 rounded text-xs hover:bg-black/90 cursor-pointer z-30"
-      style={{ pointerEvents: 'auto' }}>
-        {mapDetail === 'high' ? '3D' : '2D'}
-      </button>
-    </div>
-
-    {/* Submit Button */}
-    <div className={`
-      mt-2 rounded-xl shadow-2xl border-4 border-black
-      transition-all duration-300 ease-in-out
-      ${isExpanded ? 'w-160' : 'w-80'}
-      ${userGuess ? 'bg-yellow-400' : 'bg-gray-300'}
-    `}>
+      {/* Close Button - Bottom Left */}
       <button
-        onClick={onSubmitGuess}
-        disabled={!userGuess}
-        className={`
-          w-full py-1 px-6 rounded-lg font-bold text-md
-          transition-all duration-200 border-2 border-black
-          ${userGuess 
-            ? 'bg-yellow-400 hover:bg-yellow-500 text-black cursor-pointer' 
-            : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-          }
-        `}
+        onClick={onToggleExpanded}
+        className="absolute bottom-4 left-4 z-50 bg-black/80 hover:bg-red-600 text-white rounded-full p-3 border-2 border-white shadow-lg transition-all duration-200"
       >
-        {userGuess ? 'Submit Guess!' : 'Make a guess'}
+        <X className="w-7 h-7" />
       </button>
+
+      {/* Submit Button - Bottom Right (only when guess is placed) */}
+      {userGuess && (
+        <button
+          onClick={onSubmitGuess}
+          className="absolute bottom-4 right-4 z-50 bg-yellow-400 hover:bg-yellow-500 text-black px-6 py-2.5 rounded-xl font-bold text-2xl border-4 border-black shadow-lg transition-all duration-200"
+        >
+          Submit Guess!
+        </button>
+      )}
+
+      {/* Instruction text when no guess is placed */}
+      {!userGuess && (
+        <div className="absolute bottom-4 right-4 z-50 bg-black/80 text-white px-4 py-2.5 rounded-lg text-xl">
+          Tap to place your guess
+        </div>
+      )}
     </div>
-  </div>
+  </>
 )
 }
