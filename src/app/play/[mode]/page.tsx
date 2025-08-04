@@ -2,12 +2,12 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from 'react'
-// import mapboxgl from 'mapbox-gl'
 import { useQuery, gql } from '@apollo/client';
-// import { Button } from "@/components/ui/button"
-// import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { useGameState } from '@/hooks/useGameState'
+import { Photo } from '@/types/game'
+import GameMap from '@/components/GameMap'
 
 const GET_RANDOM_PHOTOS = gql`
 query GetRandomPhotos($count: Int!) {
@@ -41,28 +41,25 @@ query GetDailyPhotos($count: Int!) {
 }
 `;
 
-type Photo = {
-id: string
-url: string
-lat: number | null
-lng: number | null
-building: string
-floor: number
-added_by: string
-created_at: string
-status: string
-}
+// type GameState = {
+//   currentRound: number
+//   totalScore: number
+//   roundScore: number
+//   userGuess: { lat: number; lng: number } | null
+//   isMapExpanded: boolean
+//   showResults: boolean
+//   gamePhase: 'playing' | 'guessing' | 'results' | 'complete'
+// }
 
 export default function PlayPage() {
     const [images, setImages] = useState<Photo[]>([]);
-    // const [isMapExpanded, setIsMapExpanded] = useState(false);
-    const [currentRound, /* setCurrentRound */] = useState(1);
-    const [score, /* setScore */] = useState(10000);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    
+    const { gameState, actions } = useGameState()
 
     const params = useParams();
-    const { mode } = params; // will be "random" or "daily"
+    const { mode } = params;
 
     const { data, error } = useQuery(
         mode === "random" ? GET_RANDOM_PHOTOS : GET_DAILY_PHOTOS,
@@ -72,6 +69,7 @@ export default function PlayPage() {
     useEffect(() => {
         if (data) {
             setImages(mode === "random" ? data.randomPhotos : data.dailyPhotos);
+            actions.startRound(); // Start the round timer
         }
     }, [data, mode]);
 
@@ -119,12 +117,12 @@ export default function PlayPage() {
                         <div className="text-left">
                             <div className="text-yellow-400 sm:text-[0.8rem] text-[0.6rem] font-semibold uppercase tracking-wider mb-1">Round</div>
                             <div className="sm:text-3xl text-1xl font-bold text-white">
-                            {currentRound}<span className="text-yellow-400">/5</span>
+                            {gameState.currentRound}<span className="text-yellow-400">/5</span>
                             </div>
                         </div>
                         <div className="text-right">
                             <div className="text-yellow-400 sm:text-[0.8rem] text-[0.6rem] font-semibold uppercase tracking-wider mb-1">Score</div>
-                            <div className="sm:text-3xl text-1xl font-bold text-white">{score.toLocaleString()}</div>
+                            <div className="sm:text-3xl text-1xl font-bold text-white">{gameState.totalScore.toLocaleString()}</div>
                         </div>
                         </div>
                     </div>
@@ -143,7 +141,7 @@ export default function PlayPage() {
                                 transition: 'transform 0.1s ease'
                             }}
                         >
-                            {images[currentRound - 1]?.url ? (
+                            {images[gameState.currentRound - 1]?.url ? (
                                 <>
                                     {/* Simple Loading Skeleton */}
                                     {!imageLoaded && (
@@ -165,11 +163,11 @@ export default function PlayPage() {
                                 >
                                 <TransformComponent>
                                 <Image
-                                    src={images[currentRound - 1].url}
+                                    src={images[gameState.currentRound - 1].url}
                                     alt="Level"
                                     width={1920}
                                     height={1080}
-                                    priority={currentRound === 1}
+                                    priority={gameState.currentRound === 1}
                                     className={`block w-auto h-auto max-w-none max-h-none object-contain transition-opacity duration-500 ${
                                         imageLoaded ? 'opacity-100' : 'opacity-0'
                                     }`}
@@ -194,10 +192,35 @@ export default function PlayPage() {
                     </div>
                 </div>
                 
-                {/* Map area - positioned in remaining space */}
-                <div className="absolute bottom-8 right-8 w-80 h-64 z-10">
-                    {/* Map content goes here */}
-                </div>
+                {/* Interactive Game Map with Submit Button */}
+                <GameMap 
+                  onPlaceGuess={actions.placeGuess}
+                  onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                  userGuess={gameState.userGuess}
+                  isExpanded={gameState.isMapExpanded}
+                  onToggleExpanded={actions.toggleMapExpanded}
+                  disabled={gameState.gamePhase === 'results'}
+                />
+                
+                {/* Results Modal */}
+                {gameState.showResults && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-2xl border-4 border-black shadow-2xl max-w-md w-full mx-4">
+                      <h2 className="text-2xl font-bold mb-4">Round {gameState.currentRound} Results</h2>
+                      <div className="space-y-2">
+                        <p><span className="font-semibold">Distance:</span> {gameState.roundResults[gameState.currentRound - 1]?.distance.toFixed(0)}m</p>
+                        <p><span className="font-semibold">Score:</span> {gameState.roundScore.toLocaleString()} points</p>
+                        <p><span className="font-semibold">Total Score:</span> {gameState.totalScore.toLocaleString()} points</p>
+                      </div>
+                      <button
+                        onClick={actions.nextRound}
+                        className="mt-6 w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-xl border-2 border-black transition-colors"
+                      >
+                        {gameState.currentRound >= 5 ? 'View Final Results' : 'Next Round'}
+                      </button>
+                    </div>
+                  </div>
+                )}
             </div>
         </main>
     );

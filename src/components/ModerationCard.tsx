@@ -63,21 +63,6 @@ export default function ModerationCard({ photo, onModerated }: ModerationCardPro
 	});
 
 	map.on('load', () => {
-	  map.addLayer({
-		id: '3d-buildings',
-		source: 'composite',
-		'source-layer': 'building',
-		filter: ['==', 'extrude', 'true'],
-		type: 'fill-extrusion',
-		minzoom: 15,
-		paint: {
-		  'fill-extrusion-color': '#aaa',
-		  'fill-extrusion-height': ['get', 'height'],
-		  'fill-extrusion-base': ['get', 'min_height'],
-		  'fill-extrusion-opacity': 0.6,
-		},
-	  });
-
 	  // Place initial marker if photo has lat/lng
 	  if (photo.lat != null && photo.lng != null) {
 		const initialMarker = new mapboxgl.Marker({ color: 'red' })

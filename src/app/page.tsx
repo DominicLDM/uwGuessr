@@ -25,6 +25,14 @@ export default function Component() {
 
   return (
     <div className="relative min-h-svh flex flex-col text-slate-900" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
+      {/* Prevent layout shift during font loading */}
+      <style jsx>{`
+        h1 {
+          font-display: swap;
+          text-rendering: optimizeLegibility;
+        }
+      `}</style>
+      
       {/* Enhanced Animated Topographical Background */}
       <TopoBackground />
       {/* Header - Empty for clean look */}
@@ -40,30 +48,38 @@ export default function Component() {
               <span className="text-black flex items-center">
                 {isGooseMode ? (
                   <>
-                    <img src="/G.svg" alt="G" className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]" />eesr
+                    <img 
+                      src="/G.svg" 
+                      alt="G" 
+                      className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
+                      width="96"
+                      height="96"
+                    />eesr
                   </>
                 ) : (
                   <>
-                    <img src="/G.svg" alt="G" className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]" />uessr
+                    <img 
+                      src="/G.svg" 
+                      alt="G" 
+                      className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
+                      width="96"
+                      height="96"
+                    />uessr
                   </>
                 )}
               </span>
             </h1>
           </div>
 
-          <div className="flex justify-center mb-5">
+          <div className="relative w-[250px] h-[50px] md:w-[350px] md:h-[70px] mx-auto mb-5">
             <Image
               src="/underline.png"
               alt="Brush stroke underline"
-              width={350}
-              height={70}
-              className="block mx-auto md:w-[350px] md:h-[70px] w-[250px] h-[50px]"
-              style={{
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.1)) blur(0.3px)'
-              }}
-              aria-hidden="true"
+              fill
+              className="object-contain"
               priority
+              aria-hidden="true"
+              sizes="(max-width: 768px) 250px, 350px"
             />
           </div>
 
