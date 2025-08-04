@@ -132,7 +132,7 @@ export default function PlayPage() {
                 {/* Image container - 80% width desktop, 95% mobile */}
                 <div className="">
                     {/* Image positioned at leftmost part of container */}
-                    <div className="h-full w-screen flex items-center sm:items-center items-start sm:pt-0 pt-12">
+                    <div className="h-full w-screen flex items-center sm:items-center items-start pt-0">
                         <div
                             className={`relative rounded-2xl m-4 sm:m-6 overflow-hidden bg-white ${imageLoaded ? 'border-4 border-black' : ''}`}
                             style={{
