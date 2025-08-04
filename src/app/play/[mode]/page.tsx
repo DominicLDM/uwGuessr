@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from 'react'
-import { useQuery, gql } from '@apollo/client';
+import { useQuery, gql, useApolloClient } from '@apollo/client';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useGameState } from '@/hooks/useGameState'
 import { Photo } from '@/types/game'
@@ -41,6 +41,13 @@ query GetDailyPhotos($count: Int!) {
 }
 `;
 
+// Lightweight ping query to wake up GraphQL server
+const PING_QUERY = gql`
+  query Ping {
+    __typename
+  }
+`;
+
 // type GameState = {
 //   currentRound: number
 //   totalScore: number
@@ -57,9 +64,31 @@ export default function PlayPage() {
     const [isMobile, setIsMobile] = useState<boolean | null>(null); // Start as null to prevent flickering
     
     const { gameState, actions } = useGameState()
+    const client = useApolloClient()
 
     const params = useParams();
     const { mode } = params;
+
+    // Connection warming and prefetching
+    useEffect(() => {
+        // Warm up the connection with a ping
+        client.query({ 
+            query: PING_QUERY,
+            fetchPolicy: 'no-cache'
+        }).catch(err => console.log('Ping failed:', err));
+
+        // Prefetch both query types to warm up the cache
+        if (mode) {
+            const otherMode = mode === "random" ? "daily" : "random";
+            const otherQuery = otherMode === "random" ? GET_RANDOM_PHOTOS : GET_DAILY_PHOTOS;
+            
+            client.query({
+                query: otherQuery,
+                variables: { count: 5 },
+                fetchPolicy: 'cache-first'
+            }).catch(err => console.log('Prefetch failed:', err));
+        }
+    }, [client, mode]);
 
     const { data, error } = useQuery(
         mode === "random" ? GET_RANDOM_PHOTOS : GET_DAILY_PHOTOS,
@@ -170,7 +199,7 @@ export default function PlayPage() {
                                     }`}
                                     style={{
                                         maxWidth: 'calc(100vw)',
-                                        maxHeight: 'calc(100vh - 200px)',
+                                        maxHeight: 'calc(100svh - 200px)',
                                         width: 'auto',
                                         height: 'auto'
                                     }}
