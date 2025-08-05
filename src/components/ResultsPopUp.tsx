@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl';
 
 // Mapbox token
@@ -39,6 +40,7 @@ export default function ResultsPopUp({
   const [animatedTotalScore, setAnimatedTotalScore] = useState(0);
   const lineAnimationRef = useRef<(() => void) | null>(null);
   const isAnimatingRef = useRef(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Small delay to ensure DOM is ready
@@ -315,7 +317,19 @@ export default function ResultsPopUp({
   const handleNext = () => {
     console.log('handleNext called - updating game state first');
     
-    // Reset animation flag
+    // Handle final results redirect immediately
+    if (currentRound >= 5) {
+      // Clean up animations first
+      isAnimatingRef.current = false;
+      if (lineAnimationRef.current) {
+        lineAnimationRef.current();
+        lineAnimationRef.current = null;
+      }
+      router.push('/results');
+      return;
+    }
+
+    // Normal next round logic (only runs if currentRound < 5)
     isAnimatingRef.current = false;
     
     // Clean up any running animations
@@ -334,7 +348,8 @@ export default function ResultsPopUp({
           coordinates: []
         }
       });
-    }  
+    }
+    // Update game state first, then animate out
     onNext();
     setIsFadingOut(true);
     setIsVisible(false);
@@ -362,7 +377,7 @@ export default function ResultsPopUp({
       {/* Bottom Info Bar */}
       <div 
         ref={bottomBarRef}
-        className={`absolute bottom-0 left-0 right-0 bg-black/90 text-white p-4 md:p-6 transition-transform duration-500 z-50 ${
+        className={`fixed inset-x-0 bottom-0 bg-black/90 w-full text-white h-auto min-h-[64px] p-4 md:p-6 transition-transform duration-500 z-50 ${
           showBottomBar ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
@@ -386,7 +401,7 @@ export default function ResultsPopUp({
           {/* Next Button */}
           <button
             onClick={handleNext}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-6 md:px-8 py-3 md:py-4 text-base md:text-lg rounded-lg transition-colors w-full md:w-auto"
+            className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-6 md:px-8 py-3 md:py-4 text-base md:text-lg rounded-lg transition-colors w-full md:w-auto cursor-pointer"
           >
             {currentRound >= 5 ? 'Final Results' : 'Next Round'}
           </button>

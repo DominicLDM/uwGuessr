@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { GameState, Photo, RoundResult } from '@/types/game'
 
 const INITIAL_GAME_STATE: GameState = {
@@ -47,8 +47,21 @@ function calculateScore(distance: number): number {
   return Math.round(score)
 }
 
+function saveRoundResultToSession(roundResult: RoundResult) {
+  const key = 'uwGuessrResults';
+  const existing = sessionStorage.getItem(key);
+  const results: RoundResult[] = existing ? JSON.parse(existing) : [];
+  results.push(roundResult);
+  sessionStorage.setItem(key, JSON.stringify(results));
+}
+
 export function useGameState() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE)
+
+  // Clear session storage when component mounts (new game starts)
+  useEffect(() => {
+    sessionStorage.removeItem('uwGuessrResults')
+  }, [])
 
   const placeGuess = useCallback((lat: number, lng: number) => {
     setGameState(prev => ({
@@ -80,6 +93,8 @@ export function useGameState() {
       score: roundScore,
       timeSpent
     }
+
+    saveRoundResultToSession(roundResult);
 
     setGameState(prev => ({
       ...prev,
