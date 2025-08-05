@@ -29,14 +29,15 @@ export default function GameMap({
   const [collapseTimeout, setCollapseTimeout] = useState<NodeJS.Timeout | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapDetail, setMapDetail] = useState<'high' | 'low'>('high')
+  const [styleChanged, setStyleChanged] = useState(false)
 
-  // Initialize map
+  // Initialize map once and keep it
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      style: mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12',
+      style: 'mapbox://styles/mapbox/standard',
       center: [-80.5417, 43.4723], // UW coordinates
       zoom: 16,
       pitch: 0,
@@ -124,14 +125,14 @@ export default function GameMap({
     }
   }, [isExpanded, mapLoaded])
 
-  // Handle map style change after map is loaded
+  // Handle map style change after map is loaded (only when user changes it)
   useEffect(() => {
-    if (mapRef.current && mapLoaded) {
+    if (mapRef.current && mapLoaded && styleChanged) {
       const style = mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12';
       console.log('Changing map style to:', mapDetail);
       mapRef.current.setStyle(style);
     }
-  }, [mapDetail, mapLoaded])
+  }, [mapDetail, mapLoaded, styleChanged])
 
   // Handle userGuess prop changes
   useEffect(() => {
@@ -220,7 +221,10 @@ return (
 
       {/* Change quality */}
       <button 
-      onClick={() => setMapDetail(mapDetail === 'high' ? 'low' : 'high')} 
+      onClick={() => {
+        setMapDetail(mapDetail === 'high' ? 'low' : 'high');
+        setStyleChanged(true);
+      }} 
         className="absolute top-2 right-2 bg-black/70 text-white p-1 rounded text-xs hover:bg-black/90 cursor-pointer z-30"
       style={{ pointerEvents: 'auto' }}>
         {mapDetail === 'high' ? '3D' : '2D'}
