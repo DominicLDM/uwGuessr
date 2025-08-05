@@ -12,13 +12,15 @@ const binaryToType = (nw: number, ne: number, se: number, sw: number) => {
   const a = [nw, ne, se, sw];
   return a.reduce((res, x) => (res << 1) | x);
 };
-// Mouse position ref will be declared inside the component
 import React, { useRef, useEffect } from 'react';
 // @ts-expect-error Perlin noise library has no types
 import * as ChriscoursesPerlinNoise from '@chriscourses/perlin-noise';
 
+interface TopoBackgroundProps {
+  onLoad?: () => void;
+}
 
-const TopoBackground: React.FC = () => {
+const TopoBackground: React.FC<TopoBackgroundProps> = ({ onLoad }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isVisibleRef = useRef(true); // Track if component is visible
 
@@ -79,6 +81,11 @@ const TopoBackground: React.FC = () => {
     canvasSize();
     window.addEventListener('resize', canvasSize);
     canvas.addEventListener('mousemove', handleMouseMove);
+    
+    // Call onLoad callback when setup is complete
+    if (onLoad) {
+      onLoad();
+    }
   };
 
 
