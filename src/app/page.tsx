@@ -62,11 +62,21 @@ export default function Component() {
   const client = useApolloClient()
 
   useEffect(() => {
-    const loadingTimer = setTimeout(() => {
+    // Check if this is the first visit in this session
+    const hasVisitedBefore = sessionStorage.getItem('homepage-visited');
+    
+    if (hasVisitedBefore) {
+      // Skip loading screen on return visits
       setPageLoaded(true);
-    }, 100); // 10ms timeout
+    } else {
+      // Show loading screen only on first visit
+      sessionStorage.setItem('homepage-visited', 'true');
+      const loadingTimer = setTimeout(() => {
+        setPageLoaded(true);
+      }, 100); // 100 millisecond timeout
 
-    return () => clearTimeout(loadingTimer);
+      return () => clearTimeout(loadingTimer);
+    }
   }, []);
 
   // Prewarm GraphQL connection when homepage loads
