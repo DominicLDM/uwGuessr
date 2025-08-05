@@ -8,6 +8,7 @@ import { useGameState } from '@/hooks/useGameState'
 import { Photo } from '@/types/game'
 import GameMap from '@/components/GameMap'
 import GameMapMobile from '@/components/GameMapMobile';
+import ResultsPopUp from '@/components/ResultsPopUp';
 
 const GET_RANDOM_PHOTOS = gql`
 query GetRandomPhotos($count: Int!) {
@@ -86,7 +87,7 @@ export default function PlayPage() {
 
     return (
         <main className="h-svh w-screen flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
-            <header className="flex w-screen justify-between items-center p-4">
+            <header className="flex w-screen justify-between items-center p-4 px-5">
                 <div className="flex items-center cursor-pointer" onClick={() => window.location.href = "/"}>
                     <h1 className="text-4xl sm:text-6xl font-bold font-black tracking-tight flex items-center justify-center -mt-1 sm:-mt-3">
                         <span className="text-yellow-500 mr-0.5">uw</span>
@@ -213,24 +214,19 @@ export default function PlayPage() {
                 )}
                 
                 {/* Results Modal */}
-                {gameState.showResults && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl border-4 border-black shadow-2xl max-w-md w-full mx-4">
-                      <h2 className="text-2xl font-bold mb-4">Round {gameState.currentRound} Results</h2>
-                      <div className="space-y-2">
-                        <p><span className="font-semibold">Distance:</span> {gameState.roundResults[gameState.currentRound - 1]?.distance.toFixed(0)}m</p>
-                        <p><span className="font-semibold">Score:</span> {gameState.roundScore.toLocaleString()} points</p>
-                        <p><span className="font-semibold">Total Score:</span> {gameState.totalScore.toLocaleString()} points</p>
-                      </div>
-                      <button
-                        onClick={actions.nextRound}
-                        className="mt-6 w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-xl border-2 border-black transition-colors"
-                      >
-                        {gameState.currentRound >= 5 ? 'View Final Results' : 'Next Round'}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <ResultsPopUp
+                    showResults={gameState.showResults}
+                    userGuess={gameState.userGuess}
+                    actualLocation={{
+                        lat: images[gameState.currentRound - 1]?.lat || 0,
+                        lng: images[gameState.currentRound - 1]?.lng || 0
+                    }}
+                distance={gameState.roundResults[gameState.currentRound - 1]?.distance || 0}
+                score={gameState.roundScore}
+                totalScore={gameState.totalScore}
+                currentRound={gameState.currentRound}
+                onNext={actions.nextRound}
+                />
             </div>
         </main>
     );

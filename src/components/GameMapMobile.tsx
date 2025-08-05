@@ -32,7 +32,7 @@ export default function GameMap({
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current) return
+    if (!mapContainer.current || mapRef.current) return
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
@@ -54,8 +54,21 @@ export default function GameMap({
       console.error('Map error:', e)
     })
 
-    // Handle map clicks
-    map.on('click', (e) => {
+    mapRef.current = map
+
+    return () => {
+      console.log('Cleaning up map')
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, []) // Only initialize once
+
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
       if (disabled) return
       
       const { lat, lng } = e.lngLat
@@ -68,17 +81,18 @@ export default function GameMap({
       // Create new marker
       const newMarker = new mapboxgl.Marker({ color: 'red' })
         .setLngLat([lng, lat])
-        .addTo(map)
+        .addTo(mapRef.current!)
       
       markerRef.current = newMarker
       onPlaceGuess(lat, lng)
-    })
+    }
 
-    mapRef.current = map
+    mapRef.current.on('click', handleMapClick)
 
     return () => {
-      console.log('Cleaning up map')
-      map.remove()
+      if (mapRef.current) {
+        mapRef.current.off('click', handleMapClick)
+      }
     }
   }, [disabled, onPlaceGuess])
 
@@ -112,19 +126,22 @@ export default function GameMap({
 
   // Handle userGuess prop changes
   useEffect(() => {
-    if (!mapRef.current || !userGuess) return
+    if (!mapRef.current) return
 
     // Remove existing marker
     if (markerRef.current) {
       markerRef.current.remove()
+      markerRef.current = null
     }
 
-    // Create new marker at userGuess location
-    const marker = new mapboxgl.Marker({ color: 'red' })
-      .setLngLat([userGuess.lng, userGuess.lat])
-      .addTo(mapRef.current)
+    // Create new marker at userGuess location if userGuess exists
+    if (userGuess) {
+      const marker = new mapboxgl.Marker({ color: 'red' })
+        .setLngLat([userGuess.lng, userGuess.lat])
+        .addTo(mapRef.current)
 
-    markerRef.current = marker
+      markerRef.current = marker
+    }
   }, [userGuess])
 
 return (
@@ -138,7 +155,7 @@ return (
         `}
       >
         <button
-          className="w-[95vw] max-w-md mx-auto px-0 py-3 rounded-xl font-bold text-lg bg-yellow-400 hover:bg-yellow-500 text-black border-4 border-black shadow-lg transition-all duration-200 flex items-center justify-center"
+          className="w-[95vw] max-w-md mx-auto px-0 py-2.5 rounded-xl font-bold text-lg bg-yellow-400 hover:bg-yellow-500 text-black border-4 border-black shadow-lg transition-all duration-200 flex items-center justify-center"
           onClick={onToggleExpanded}
         >
           <ChevronUp className="w-6 h-6 mr-2" />
@@ -199,7 +216,7 @@ return (
       {userGuess && (
         <button
           onClick={onSubmitGuess}
-          className="absolute bottom-4 right-4 z-50 bg-yellow-400 hover:bg-yellow-500 text-black px-6 py-2.5 rounded-xl font-bold text-2xl border-4 border-black shadow-lg transition-all duration-200"
+          className="absolute bottom-4 right-4 z-50 bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2.5 rounded-xl font-bold text-xl border-4 border-black shadow-lg transition-all duration-200"
         >
           Submit Guess!
         </button>
@@ -207,7 +224,7 @@ return (
 
       {/* Instruction text when no guess is placed */}
       {!userGuess && (
-        <div className="absolute bottom-4 right-4 z-50 bg-black/80 text-white px-4 py-2.5 rounded-lg text-xl">
+        <div className="absolute bottom-4 right-4 z-50 bg-black/80 text-white px-4 py-2.5 rounded-xl text-xl">
           Tap to place your guess
         </div>
       )}

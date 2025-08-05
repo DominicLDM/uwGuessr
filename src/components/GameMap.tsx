@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-// import { useGameState } from '@/hooks/useGameState'
 import mapboxgl from 'mapbox-gl'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
@@ -33,7 +32,7 @@ export default function GameMap({
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current) return
+    if (!mapContainer.current || mapRef.current) return
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
@@ -55,8 +54,21 @@ export default function GameMap({
       console.error('Map error:', e)
     })
 
-    // Handle map clicks
-    map.on('click', (e) => {
+    mapRef.current = map
+
+    return () => {
+      console.log('Cleaning up map')
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, []) // Only initialize once
+
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
       if (disabled) return
       
       const { lat, lng } = e.lngLat
@@ -69,19 +81,20 @@ export default function GameMap({
       // Create new marker
       const newMarker = new mapboxgl.Marker({ color: 'red' })
         .setLngLat([lng, lat])
-        .addTo(map)
+        .addTo(mapRef.current!)
       
       markerRef.current = newMarker
       onPlaceGuess(lat, lng)
-    })
+    }
 
-    mapRef.current = map
+    mapRef.current.on('click', handleMapClick)
 
     return () => {
-      console.log('Cleaning up map')
-      map.remove()
+      if (mapRef.current) {
+        mapRef.current.off('click', handleMapClick)
+      }
     }
-  }, [disabled, onPlaceGuess, mapDetail])
+  }, [disabled, onPlaceGuess])
 
   // Handle map resize when container changes
   useEffect(() => {
@@ -115,25 +128,29 @@ export default function GameMap({
   useEffect(() => {
     if (mapRef.current && mapLoaded) {
       const style = mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12';
+      console.log('Changing map style to:', mapDetail);
       mapRef.current.setStyle(style);
     }
   }, [mapDetail, mapLoaded])
 
   // Handle userGuess prop changes
   useEffect(() => {
-    if (!mapRef.current || !userGuess) return
+    if (!mapRef.current) return
 
     // Remove existing marker
     if (markerRef.current) {
       markerRef.current.remove()
+      markerRef.current = null
     }
 
-    // Create new marker at userGuess location
-    const marker = new mapboxgl.Marker({ color: 'red' })
-      .setLngLat([userGuess.lng, userGuess.lat])
-      .addTo(mapRef.current)
+    // Create new marker at userGuess location if userGuess exists
+    if (userGuess) {
+      const marker = new mapboxgl.Marker({ color: 'red' })
+        .setLngLat([userGuess.lng, userGuess.lat])
+        .addTo(mapRef.current)
 
-    markerRef.current = marker
+      markerRef.current = marker
+    }
   }, [userGuess])
 
   // Handle delayed collapse
@@ -178,11 +195,14 @@ return (
       `}
     >
       {/* Loading overlay */}
-      {!mapLoaded && (
-        <div className="absolute inset-0 bg-gray-200 flex items-center justify-center z-20">
-          <div className="text-gray-500 text-sm">Loading map...</div>
-        </div>
-      )}
+      <div className={`
+        absolute inset-0 bg-gray-200 flex items-center justify-center
+        transition-opacity duration-300
+        ${mapLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}
+        z-20
+      `}>
+        <div className="text-gray-500 text-sm">Loading map...</div>
+      </div>
       
       {/* Actual Map */}
       <div 
@@ -190,7 +210,7 @@ return (
         className={`
           absolute inset-0
           ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}
-          z-10
+          z-10 bg-gray-100
         `}
         style={{
           width: '100%',
