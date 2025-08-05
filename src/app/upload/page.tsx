@@ -225,7 +225,7 @@ export default function UploadPage() {
                                 </div>
 
                                 <p className="text-gray-600 mb-4 text-sm sm:text-base">
-                                    Please ensure the image is guessable
+                                    Please ensure the image is guessable and relevant!
                                 </p>
                                 
                                 <input
@@ -250,7 +250,7 @@ export default function UploadPage() {
                                         </div>
                                         <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-800 mb-2">Drop your photo here</h3>
                                         <p className="text-gray-600 mb-3 sm:mb-4 text-sm sm:text-base">or click to browse files</p>
-                                        <p className="text-xs sm:text-sm text-gray-500">JPEG, PNG, GIF up to 10MB</p>
+                                        <p className="text-xs sm:text-sm text-gray-500">JPEG, PNG, WEBP up to 10MB</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
