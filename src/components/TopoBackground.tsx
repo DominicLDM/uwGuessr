@@ -23,6 +23,7 @@ interface TopoBackgroundProps {
 const TopoBackground: React.FC<TopoBackgroundProps> = ({ onLoad }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isVisibleRef = useRef(true); // Track if component is visible
+  const [isLoaded, setIsLoaded] = React.useState(false);
 
   // Mutable state using useRef
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -81,6 +82,11 @@ const TopoBackground: React.FC<TopoBackgroundProps> = ({ onLoad }) => {
     canvasSize();
     window.addEventListener('resize', canvasSize);
     canvas.addEventListener('mousemove', handleMouseMove);
+    
+    // Set loaded state to trigger fade-in
+    setTimeout(() => {
+      setIsLoaded(true);
+    }, 100); // Small delay to ensure canvas is ready
     
     // Call onLoad callback when setup is complete
     if (onLoad) {
@@ -300,6 +306,7 @@ const TopoBackground: React.FC<TopoBackgroundProps> = ({ onLoad }) => {
     <canvas
       ref={canvasRef}
       id="res-canvas"
+      className={`transition-opacity duration-900 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
       style={{
         position: 'absolute',
         inset: 0,

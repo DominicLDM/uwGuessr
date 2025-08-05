@@ -57,27 +57,8 @@ const PING_QUERY = gql`
 export default function Component() {
   const [isGooseMode, setIsGooseMode] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
-  const [pageLoaded, setPageLoaded] = useState(false)
   const router = useRouter()
   const client = useApolloClient()
-
-  useEffect(() => {
-    // Check if this is the first visit in this session
-    const hasVisitedBefore = sessionStorage.getItem('homepage-visited');
-    
-    if (hasVisitedBefore) {
-      // Skip loading screen on return visits
-      setPageLoaded(true);
-    } else {
-      // Show loading screen only on first visit
-      sessionStorage.setItem('homepage-visited', 'true');
-      const loadingTimer = setTimeout(() => {
-        setPageLoaded(true);
-      }, 100); // 100 millisecond timeout
-
-      return () => clearTimeout(loadingTimer);
-    }
-  }, []);
 
   // Prewarm GraphQL connection when homepage loads
   useEffect(() => {
@@ -108,18 +89,9 @@ export default function Component() {
 
   return (
     <>
-      {/* Blank Loading Screen */}
-      {!pageLoaded && (
-        <div className="fixed inset-0 z-50" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
-          {/* Completely blank - no content */}
-        </div>
-      )}
-
       {/* Main Content */}
       <div 
-        className={`relative min-h-svh flex flex-col text-slate-900 transition-opacity duration-1000 ${
-          pageLoaded ? 'opacity-100' : 'opacity-0'
-        }`} 
+        className="relative min-h-svh flex flex-col text-slate-900" 
         style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}
       >
       {/* Prevent layout shift during font loading */}
