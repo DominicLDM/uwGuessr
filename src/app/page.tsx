@@ -57,7 +57,6 @@ const PING_QUERY = gql`
 export default function Component() {
   const [isGooseMode, setIsGooseMode] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
-  const [isPageLoaded, setPageLoaded] = useState(false);
   const router = useRouter()
   const client = useApolloClient()
 
@@ -83,28 +82,13 @@ export default function Component() {
     }).catch(err => console.log('Daily photos prefetch failed:', err));
   }, [client]);
 
-    useEffect(() => {
-    // Function to check if all images are loaded
-    const handleLoad = () => {
-      setPageLoaded(true);
-    };
-
-    // Event listeners for image load events
-    window.addEventListener('load', handleLoad);
-
-    // Clean up event listener
-    return () => {
-      window.removeEventListener('load', handleLoad);
-    };
-  }, []);
-
   const handleNavigation = (path: string) => {
     setIsNavigating(true)
     router.push(path)
   }
 
   return (
-    <div className={`relative min-h-screen flex flex-col text-slate-900 transition-opacity ${isPageLoaded ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
+    <div className="relative min-h-svh flex flex-col text-slate-900" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
       {/* Prevent layout shift during font loading */}
       <style jsx>{`
         h1 {
