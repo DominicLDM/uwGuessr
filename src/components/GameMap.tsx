@@ -9,29 +9,24 @@ interface GameMapProps {
   onPlaceGuess: (lat: number, lng: number) => void
   onSubmitGuess?: () => void
   userGuess: { lat: number; lng: number } | null
-  isExpanded: boolean
-  onToggleExpanded: () => void
   disabled?: boolean
-  showSubmitButton?: boolean
   imageWidth?: number
+  onToggleMapDetail?: () => void
+  mapDetail?: 'high' | 'low'
 }
 
 export default function GameMap({ 
   onPlaceGuess, 
-  onSubmitGuess,
   userGuess, 
-  isExpanded, 
-  onToggleExpanded,
   disabled = false,
-  imageWidth = 600, // Default fallback
+  mapDetail: externalMapDetail,
 }: GameMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markerRef = useRef<mapboxgl.Marker | null>(null)
-  const [collapseTimeout, setCollapseTimeout] = useState<NodeJS.Timeout | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [mapDetail, setMapDetail] = useState<'high' | 'low'>('high')
-  const [styleChanged, setStyleChanged] = useState(false)
+  const [mapFullyReady, setMapFullyReady] = useState(false)
+  const mapDetail = externalMapDetail
 
   // Initialize map once and keep it
   useEffect(() => {
@@ -45,12 +40,23 @@ export default function GameMap({
       pitch: 0,
       bearing: -20,
       antialias: true,
+      fadeDuration: 0,
     })
 
     // Wait for map to fully load before showing
     map.on('load', () => {
       console.log('Map loaded successfully')
       setMapLoaded(true)
+    })
+
+    map.on('idle', () => {
+      if (mapLoaded && !mapFullyReady) {
+        console.log('Map tiles fully loaded, showing map')
+        // Add a small delay to ensure everything is rendered
+        setTimeout(() => {
+          setMapFullyReady(true)
+        }, 100)
+      }
     })
 
     map.on('error', (e) => {
@@ -65,6 +71,9 @@ export default function GameMap({
         mapRef.current.remove()
         mapRef.current = null
       }
+      // Reset states on cleanup
+      setMapLoaded(false)
+      setMapFullyReady(false)
     }
   }, []) // Only initialize once
 
@@ -125,16 +134,32 @@ export default function GameMap({
         timeouts.forEach(timeout => clearTimeout(timeout))
       }
     }
-  }, [isExpanded, mapLoaded])
+  }, [mapLoaded])
 
-  // Handle map style change after map is loaded (only when user changes it)
+  // Handle map style change after map is loaded
   useEffect(() => {
-    if (mapRef.current && mapLoaded && styleChanged) {
+    if (mapRef.current && mapLoaded) {
       const style = mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12';
-      console.log('Changing map style to:', mapDetail);
-      mapRef.current.setStyle(style);
+      console.log('Changing map style to:', mapDetail, 'Current style:', mapRef.current.getStyle().name);
+      
+      // Only change if it's different from current style
+      const currentStyle = mapRef.current.getStyle();
+      const newStyleId = mapDetail === 'high' ? 'standard' : 'streets-v12';
+      
+      if (!currentStyle.name || !currentStyle.name.includes(newStyleId)) {
+        // Hide map during style change
+        setMapFullyReady(false);
+        mapRef.current.setStyle(style);
+        
+        // Wait for the new style to load completely
+        mapRef.current.once('idle', () => {
+          setTimeout(() => {
+            setMapFullyReady(true);
+          }, 150);
+        });
+      }
     }
-  }, [mapDetail, mapLoaded, styleChanged])
+  }, [mapDetail, mapLoaded])
 
   // Handle userGuess prop changes
   useEffect(() => {
@@ -156,92 +181,35 @@ export default function GameMap({
     }
   }, [userGuess])
 
-  // Calculate available space based on actual image width
-  const getExpandedWidth = () => {
-    if (!isExpanded) return '20rem'
-    
-    const availableSpace = window.innerWidth - (imageWidth + 80 + 64) // imageWidth + margins + padding (4rem = 64px)
-    const minDesiredWidth = 600 // Minimum width for good aspect ratio
-    
-    if (availableSpace < minDesiredWidth) {
-      // If not enough space, expand to a larger fixed size that might overlap slightly
-      return `${minDesiredWidth}px`
-    }
-    
-    return `calc(100vw - ${imageWidth + 80}px - 4rem)`
-  }
-
-  // Calculate a proportional height that maintains good aspect ratio
-  const getExpandedHeight = () => {
-    if (!isExpanded) return '16rem'
-    
-    const availableSpace = window.innerWidth - (imageWidth + 80 + 64)
-    const mapWidth = availableSpace < 600 ? 600 : availableSpace
-    
-    const aspectRatioHeight = mapWidth * 0.75 // 4:3 ratio
-    const maxReasonableHeight = window.innerHeight * 0.67 // Max 6 7 *hands*
-    const minHeight = 400 // Minimum useful height
-    
-    const calculatedHeight = Math.min(aspectRatioHeight, maxReasonableHeight)
-    return `${Math.max(calculatedHeight, minHeight)}px`
-  }
-
-  // Handle delayed collapse
-  const handleMouseEnter = () => {
-    if (collapseTimeout) {
-      clearTimeout(collapseTimeout)
-      setCollapseTimeout(null)
-    }
-    if (!isExpanded) {
-      onToggleExpanded()
-    }
-  }
-
-  const handleMouseLeave = () => {
-    if (isExpanded) {
-      const timeout = setTimeout(() => {
-        onToggleExpanded()
-      }, 500) // 500ms delay
-      setCollapseTimeout(timeout)
-    }
-  }
-
 return (
   <div 
     className={`
-      absolute bottom-8 right-8 z-10 
-      flex flex-col
-      transition-all duration-300 ease-in-out
+    absolute inset-0 w-full h-full z-0
+    flex flex-col
+    transition-all duration-100 ease-in-out
       ${disabled ? 'opacity-50' : ''}
     `}
-    onMouseEnter={handleMouseEnter}
-    onMouseLeave={handleMouseLeave}
   >
     {/* Map Container */}
     <div 
       className={`
-        border-4 border-black rounded-xl shadow-2xl
-        transition-all duration-300 ease-in-out
+        w-full h-full
         relative overflow-hidden
         bg-gray-200
       `}
       style={{
-        width: getExpandedWidth(),
-        height: isExpanded ? getExpandedHeight() : '16rem',
-        maxWidth: isExpanded ? 'none' : getExpandedWidth(), // Remove maxWidth constraint when expanded
-        maxHeight: isExpanded ? 'none' : '16rem', // Remove maxHeight constraint when expanded
-        minWidth: isExpanded ? '600px' : '20rem', // Ensure good aspect ratio
-        minHeight: isExpanded ? '400px' : '16rem', // Ensure minimum usable height
+        width: '100%',
+        height: '100%',
       }}
     >
       {/* Loading overlay */}
       <div className={`
         absolute inset-0 bg-gray-200 flex items-center justify-center
-        transition-opacity duration-300
-        ${mapLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}
-        z-20
+        transition-opacity duration-200
+        ${mapFullyReady ? 'opacity-0 pointer-events-none' : 'opacity-100'}
+        z-30
       `}>
-        <div className="text-gray-500 text-sm">Loading map...</div>
+        <div className={`text-gray-500 text-lg ml-96`}>Loading map...</div>
       </div>
       
       {/* Actual Map */}
@@ -251,52 +219,14 @@ return (
           absolute inset-0
           ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}
           z-10 bg-gray-100
+          transition-opacity duration-400 ease-out
+          ${mapFullyReady ? 'opacity-100' : 'opacity-0'}
         `}
         style={{
           width: '100%',
           height: '100%',
         }}
       />
-
-      {/* Change quality */}
-      <button 
-      onClick={() => {
-        setMapDetail(mapDetail === 'high' ? 'low' : 'high');
-        setStyleChanged(true);
-      }} 
-        className="absolute top-2 right-2 bg-black/70 text-white p-1 rounded text-xs hover:bg-black/90 cursor-pointer z-30"
-      style={{ pointerEvents: 'auto' }}>
-        {mapDetail === 'high' ? '3D' : '2D'}
-      </button>
-    </div>
-
-    {/* Submit Button */}
-    <div 
-      className={`
-        mt-2 rounded-xl shadow-2xl border-4 border-black
-        transition-all duration-300 ease-in-out
-        ${userGuess ? 'bg-yellow-400' : 'bg-gray-300'}
-      `}
-      style={{
-        width: getExpandedWidth(),
-        maxWidth: isExpanded ? 'none' : getExpandedWidth(), // Remove maxWidth constraint when expanded  
-        minWidth: isExpanded ? '600px' : '20rem', // Ensure good aspect ratio
-      }}
-    >
-      <button
-        onClick={onSubmitGuess}
-        disabled={!userGuess}
-        className={`
-          w-full py-1 px-6 rounded-lg font-bold text-md
-          transition-all duration-200 border-2 border-black
-          ${userGuess 
-            ? 'bg-yellow-400 hover:bg-yellow-500 text-black cursor-pointer' 
-            : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-          }
-        `}
-      >
-        {userGuess ? 'Submit Guess!' : 'Make a guess'}
-      </button>
     </div>
   </div>
 )

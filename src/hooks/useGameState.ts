@@ -32,7 +32,7 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 // Calculate score based on distance with exponential decay from SLC Tim Hortons
 function calculateScore(distance: number): number {
   const maxScore = 5000 // 50k points for perfect guesses
-  const maxDistance = 1000 // 1km radius for scoring
+  const maxDistance = 2000 // 2km threshold for scoring
   
   // Perfect score for guesses within 30 meters
   if (distance <= 30) return maxScore

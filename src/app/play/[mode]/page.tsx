@@ -56,7 +56,7 @@ export default function PlayPage() {
     const [images, setImages] = useState<Photo[]>([]);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isMobile, setIsMobile] = useState<boolean | null>(null); // Start as null to prevent flickering
-    const [imageWidth, setImageWidth] = useState<number>(600); // Track actual image width
+    const [mapDetail, setMapDetail] = useState<'high' | 'low'>('high'); // Map detail state for desktop background
     
     const { gameState, actions } = useGameState()
 
@@ -87,127 +87,241 @@ export default function PlayPage() {
     }
 
     return (
-        <main className="h-svh w-screen flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
-            <header className="flex w-screen justify-between items-center p-4 px-5">
-                <div className="flex items-center cursor-pointer" onClick={() => window.location.href = "/"}>
-                    <h1 className="text-4xl sm:text-6xl font-bold font-black tracking-tight flex items-center justify-center -mt-1 sm:-mt-3">
-                        <span className="text-yellow-500 mr-0.5">uw</span>
-                        <span className="text-black flex items-center">
-                            <img src="/G.svg" alt="G" className="inline-block align-middle mx-0 -mr-0.25 sm:w-[52px] sm:h-[52px] w-[28px] h-[28px]" />
-                            uessr
-                        </span>
-                    </h1>
+        <main className="h-svh w-screen relative">
+            {/* Desktop: Full Background Map */}
+            {isMobile !== null && !isMobile && (
+                <div className="absolute inset-0 w-full h-full z-0">
+                    <GameMap 
+                        onPlaceGuess={actions.placeGuess}
+                        onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                        userGuess={gameState.userGuess}
+                        disabled={gameState.gamePhase === 'results'}
+                        onToggleMapDetail={() => setMapDetail(mapDetail === 'high' ? 'low' : 'high')}
+                        mapDetail={mapDetail}
+                    />
                 </div>
-                {/* Round and Score Indicator */}
-                <div className="relative">
-                    {/* Angular offset shadows */}
-                    <div className="absolute inset-0 shadow-xl transform sm:translate-x-2.5 sm:translate-y-2.5 translate-x-1.5 translate-y-1.5"
-                        style={{ clipPath: 'polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px))' }}>
-                        <div className="h-full flex">
-                            <div className="flex-1 bg-yellow-400"></div>
-                        </div>
-                    </div>
-                    <div className="absolute inset-0 shadow-xl transform sm:translate-x-1.25 sm:translate-y-1.25 translate-x-0.75 translate-y-0.75"
-                        style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px))' }}>
-                        <div className="h-full flex">
-                            <div className="flex-1 bg-yellow-300"></div>
-                        </div>
-                    </div>
-                    <div className="relative bg-black text-white p-2.5 sm:p-4.5 shadow-2xl"
-                        style={{ clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))' }}>
-                        <div className="flex items-center justify-between sm:gap-x-16 gap-x-8">
-                        <div className="text-left">
-                            <div className="text-yellow-400 sm:text-[0.8rem] text-[0.6rem] font-semibold uppercase tracking-wider mb-1">Round</div>
-                            <div className="sm:text-3xl text-1xl font-bold text-white">
-                            {gameState.currentRound}<span className="text-yellow-400">/5</span>
+            )}
+
+            {/* Desktop: Floating score card */}
+            {isMobile !== null && !isMobile && (
+                <div className="absolute top-4 right-4 z-20">
+                    <div className="relative">
+                        {/* Angular offset shadows */}
+                        <div className="absolute inset-0 shadow-xl transform translate-x-2.5 translate-y-2.5"
+                            style={{ clipPath: 'polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px))' }}>
+                            <div className="h-full flex">
+                                <div className="flex-1 bg-yellow-400"></div>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <div className="text-yellow-400 sm:text-[0.8rem] text-[0.6rem] font-semibold uppercase tracking-wider mb-1">Score</div>
-                            <div className="sm:text-3xl text-1xl font-bold text-white">{gameState.totalScore.toLocaleString()}</div>
+                        <div className="absolute inset-0 shadow-xl transform translate-x-1.25 translate-y-1.25"
+                            style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px))' }}>
+                            <div className="h-full flex">
+                                <div className="flex-1 bg-yellow-300"></div>
+                            </div>
                         </div>
+                        <div className="relative bg-black text-white p-3 sm:p-4 shadow-2xl"
+                            style={{ clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))' }}>
+                            <div className="flex items-center justify-between gap-x-12 sm:gap-x-16">
+                                <div className="text-left">
+                                    <div className="text-yellow-400 text-xs sm:text-sm font-semibold uppercase tracking-wider mb-1">Round</div>
+                                    <div className="text-xl sm:text-2xl font-bold text-white">
+                                        {gameState.currentRound}<span className="text-yellow-400">/5</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-yellow-400 text-xs sm:text-sm font-semibold uppercase tracking-wider mb-1">Score</div>
+                                    <div className="text-xl sm:text-2xl font-bold text-white">{gameState.totalScore.toLocaleString()}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </header>
-            <div className="flex flex-1 flex-row relative">
-                {/* Image container - 80% width desktop, 95% mobile */}
-                <div className="">
-                    {/* Image positioned at leftmost part of container */}
-                    <div className="h-full w-screen flex items-center sm:items-center items-start pt-0">
-                        <div
-                            className={`relative rounded-2xl m-4 sm:m-6 overflow-hidden bg-white ${imageLoaded ? 'border-4 border-black' : ''}`}
-                            style={{
-                                transform: 'scale(1)',
-                                transformOrigin: 'left center',
-                                transition: 'transform 0.1s ease'
-                            }}
+                    
+                    {/* 2D/3D Toggle */}
+                    <div className="mt-3.5 flex justify-end">
+                        <button 
+                            onClick={() => setMapDetail(mapDetail === 'high' ? 'low' : 'high')} 
+                            className="bg-black/70 text-white px-2.5 py-2 rounded-lg text-sm font-bold hover:bg-black/90 cursor-pointer shadow-2xl border-2 border-white/20"
                         >
-                            {images[gameState.currentRound - 1]?.url ? (
-                                <>
-                                    {/* Simple Loading Skeleton */}
-                                    {!imageLoaded && (
-                                        <div className="absolute inset-0 bg-gray-200 animate-pulse">
-                                            <div className="h-full w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+                            {mapDetail === 'high' ? '3D' : '2D'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Desktop: Floating image */}
+            {isMobile !== null && !isMobile && (
+                <div className="absolute top-4 left-4 bottom-4 z-10 flex items-center">
+                    <div
+                        className={`relative rounded-2xl overflow-hidden bg-gray-200 ${imageLoaded ? 'border-4 border-black' : ''}`}
+                        style={{
+                            transform: 'scale(1)',
+                            transformOrigin: 'left center',
+                            transition: 'transform 0.1s ease'
+                        }}
+                    >
+                        {images[gameState.currentRound - 1]?.url ? (
+                            <>  
+                                <TransformWrapper
+                                    minScale={1}
+                                    maxScale={4}
+                                    limitToBounds={true}
+                                    centerOnInit={true}
+                                    wheel={{ smoothStep: 0.005}}
+                                    doubleClick={{ mode: 'toggle' }}
+                                    panning={{ velocityDisabled: false }}
+                                    smooth={true}
+                                    disabled={false}
+                                >
+                                    <TransformComponent>
+                                        <img
+                                            src={images[gameState.currentRound - 1].url}
+                                            alt="Level"
+                                            className={`block w-auto h-auto max-w-none max-h-none object-contain transition-opacity duration-500 ${
+                                                imageLoaded ? 'opacity-100' : 'opacity-0'
+                                            }`}
+                                            style={{
+                                                maxWidth: 'calc(50vw)', // Account for margins and score card
+                                                maxHeight: 'calc(100vh - 32px)', // Full height minus margins
+                                                width: 'auto',
+                                                height: 'auto'
+                                            }}
+                                            onLoad={() => {
+                                                setImageLoaded(true)
+                                            }}
+                                            onError={() => setImageLoaded(false)}
+                                        />
+                                    </TransformComponent>
+                                </TransformWrapper>
+                            </>
+                        ) : (
+                            <div className="w-96 h-72 flex items-center justify-center animate-pulse rounded-2xl">
+                                <div className="w-24 h-24 rounded" />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Desktop: Submit button */}
+            {isMobile !== null && !isMobile && (
+                <div className="absolute bottom-8 right-8 z-30">
+                    <div className={`
+                        rounded-xl shadow-2xl border-4 border-black
+                        transition-all duration-300 ease-in-out
+                        w-80
+                        ${gameState.userGuess ? 'bg-yellow-400' : 'bg-gray-300'}
+                    `}>
+                        <button
+                            onClick={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                            disabled={!gameState.userGuess}
+                            className={`
+                                w-full py-3 px-6 rounded-lg font-bold text-lg
+                                transition-all duration-200 border-2 border-black
+                                ${gameState.userGuess 
+                                    ? 'bg-yellow-400 hover:bg-yellow-500 text-black cursor-pointer' 
+                                    : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                }
+                            `}
+                        >
+                            {gameState.userGuess ? 'Submit Guess!' : 'Make a guess'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Mobile: Logo and score navbar with image and slide in map */}
+            {isMobile !== null && isMobile && (
+                <div className="h-full w-full flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
+                    <header className="flex w-screen justify-between items-center p-4 px-5">
+                        <div className="flex items-center cursor-pointer" onClick={() => window.location.href = "/"}>
+                            <h1 className="text-4xl sm:text-6xl font-bold font-black tracking-tight flex items-center justify-center -mt-1 sm:-mt-3">
+                                <span className="text-yellow-500 mr-0.5">uw</span>
+                                <span className="text-black flex items-center">
+                                    <img src="/G.svg" alt="G" className="inline-block align-middle mx-0 -mr-0.25 sm:w-[52px] sm:h-[52px] w-[28px] h-[28px]" />
+                                    uessr
+                                </span>
+                            </h1>
+                        </div>
+                        {/* Round and Score Indicator */}
+                        <div className="relative">
+                            {/* Angular offset shadows */}
+                            <div className="absolute inset-0 shadow-xl transform translate-x-1.5 translate-y-1.5"
+                                style={{ clipPath: 'polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px))' }}>
+                                <div className="h-full flex">
+                                    <div className="flex-1 bg-yellow-400"></div>
+                                </div>
+                            </div>
+                            <div className="absolute inset-0 shadow-xl transform translate-x-0.75 translate-y-0.75"
+                                style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px))' }}>
+                                <div className="h-full flex">
+                                    <div className="flex-1 bg-yellow-300"></div>
+                                </div>
+                            </div>
+                            <div className="relative bg-black text-white p-2.5 shadow-2xl"
+                                style={{ clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))' }}>
+                                <div className="flex items-center justify-between gap-x-8">
+                                    <div className="text-left">
+                                        <div className="text-yellow-400 text-[0.6rem] font-semibold uppercase tracking-wider mb-1">Round</div>
+                                        <div className="text-1xl font-bold text-white">
+                                            {gameState.currentRound}<span className="text-yellow-400">/5</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-yellow-400 text-[0.6rem] font-semibold uppercase tracking-wider mb-1">Score</div>
+                                        <div className="text-1xl font-bold text-white">{gameState.totalScore.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                    <div className="flex flex-1 flex-row relative">
+                        {/* Image container */}
+                        <div className="">
+                            {/* Image positioned at leftmost part of container */}
+                            <div className="h-full w-screen flex items-center items-start pt-0">
+                                <div
+                                    className={`relative rounded-2xl m-4 overflow-hidden bg-white ${imageLoaded ? 'border-4 border-black' : ''}`}
+                                    style={{
+                                        transform: 'scale(1)',
+                                        transformOrigin: 'left center',
+                                        transition: 'transform 0.1s ease'
+                                    }}
+                                >
+                                    {images[gameState.currentRound - 1]?.url ? (
+                                        <>
+                                            {/* Simple Loading Skeleton */}
+                                            {!imageLoaded && (
+                                                <div className="absolute inset-0 bg-gray-200 animate-pulse">
+                                                    <div className="h-full w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+                                                </div>
+                                            )}
+                                            
+                                            <img
+                                                src={images[gameState.currentRound - 1].url}
+                                                alt="Level"
+                                                className={`block w-auto h-auto object-contain transition-opacity duration-500 ${
+                                                    imageLoaded ? 'opacity-100' : 'opacity-0'
+                                                }`}
+                                                style={{
+                                                    maxWidth: 'calc(100vw)',
+                                                    maxHeight: 'calc(100svh - 200px)',
+                                                    width: 'auto',
+                                                    height: 'auto'
+                                                }}
+                                                onLoad={() => setImageLoaded(true)}
+                                                onError={() => setImageLoaded(false)}
+                                            />
+                                        </>
+                                    ) : (
+                                        <div className="w-96 h-72 flex items-center justify-center animate-pulse rounded-2xl">
+                                            <div className="w-24 h-24 rounded" />
                                         </div>
                                     )}
-                                    
-                                    <TransformWrapper
-                                minScale={1}
-                                maxScale={4}
-                                limitToBounds={true}
-                                centerOnInit={true}
-                                wheel={{ smoothStep: 0.005}}
-                                doubleClick={{ mode: 'toggle' }}
-                                panning={{ velocityDisabled: false }}
-                                smooth={true}
-                                disabled={isMobile ? true : false}
-                                >
-                                <TransformComponent>
-                                <img
-                                    src={images[gameState.currentRound - 1].url}
-                                    alt="Level"
-                                    className={`block w-auto h-auto max-w-none max-h-none object-contain transition-opacity duration-500 ${
-                                        imageLoaded ? 'opacity-100' : 'opacity-0'
-                                    }`}
-                                    style={{
-                                        maxWidth: 'calc(100vw)',
-                                        maxHeight: 'calc(100svh - 200px)',
-                                        width: 'auto',
-                                        height: 'auto'
-                                    }}
-                                    onLoad={(e) => {
-                                        setImageLoaded(true)
-                                        const img = e.target as HTMLImageElement
-                                        setImageWidth(img.offsetWidth)
-                                    }}
-                                    onError={() => setImageLoaded(false)}
-                                />
-                                </TransformComponent>
-                                </TransformWrapper>
-                                </>
-                            ) : (
-                                <div className="w-96 h-72 flex items-center justify-center animate-pulse rounded-2xl">
-                                    <div className="w-24 h-24 rounded" />
                                 </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
-                </div>
-                
-                {/* Interactive Game Map with Submit Button */}
-                {isMobile !== null && (
-                    !isMobile ? (
-                        <GameMap 
-                            onPlaceGuess={actions.placeGuess}
-                            onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
-                            userGuess={gameState.userGuess}
-                            isExpanded={gameState.isMapExpanded}
-                            onToggleExpanded={actions.toggleMapExpanded}
-                            disabled={gameState.gamePhase === 'results'}
-                            imageWidth={imageWidth}
-                        />
-                    ) : (
+                        
+                        {/* Mobile Game Map */}
                         <GameMapMobile 
                             onPlaceGuess={actions.placeGuess}
                             onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
@@ -216,24 +330,24 @@ export default function PlayPage() {
                             onToggleExpanded={actions.toggleMapExpanded}
                             disabled={gameState.gamePhase === 'results'}
                         />
-                    )
-                )}
+                    </div>
+                </div>
+            )}
                 
-                {/* Results Modal */}
-                <ResultsPopUp
-                    showResults={gameState.showResults}
-                    userGuess={gameState.userGuess}
-                    actualLocation={{
-                        lat: images[gameState.currentRound - 1]?.lat || 0,
-                        lng: images[gameState.currentRound - 1]?.lng || 0
-                    }}
+            {/* Results Modal */}
+            <ResultsPopUp
+                showResults={gameState.showResults}
+                userGuess={gameState.userGuess}
+                actualLocation={{
+                    lat: images[gameState.currentRound - 1]?.lat || 0,
+                    lng: images[gameState.currentRound - 1]?.lng || 0
+                }}
                 distance={gameState.roundResults[gameState.currentRound - 1]?.distance || 0}
                 score={gameState.roundScore}
                 totalScore={gameState.totalScore}
                 currentRound={gameState.currentRound}
                 onNext={actions.nextRound}
-                />
-            </div>
+            />
         </main>
     );
 }
