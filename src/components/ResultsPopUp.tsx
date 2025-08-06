@@ -15,6 +15,7 @@ interface ResultsPopUpProps {
   score: number;
   totalScore: number;
   currentRound: number;
+  mode?: string;
   onNext: () => void;
 }
 
@@ -26,6 +27,7 @@ export default function ResultsPopUp({
   score,
   totalScore,
   currentRound,
+  mode,
   onNext
 }: ResultsPopUpProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -362,7 +364,8 @@ export default function ResultsPopUp({
       const currentGame = sessionStorage.getItem('uwGuessrCurrentGame');
       if (currentGame) {
         const gameData = JSON.parse(currentGame);
-        const savedResults = sessionStorage.getItem('uwGuessrResults');
+        const key = mode === 'daily' ? 'uwGuessrDailyResults' : 'uwGuessrResults';
+        const savedResults = sessionStorage.getItem(key);
         if (savedResults && gameData.mode === 'daily') {
           const today = new Date().toISOString().split('T')[0];
           // Save final completion

@@ -50,11 +50,11 @@ export default function PlayPage() {
     const [isMobile, setIsMobile] = useState<boolean | null>(null); // Start as null to prevent flickering
     const [mapDetail, setMapDetail] = useState<'high' | 'low'>('high'); // Map detail state for desktop background
     
-    const { gameState, actions } = useGameState()
     const router = useRouter();
-
     const params = useParams();
     const { mode } = params;
+    
+    const { gameState, actions } = useGameState(mode as string)
 
     // Game state persistence functions
     const saveGameState = (gameState: GameState, images: Photo[]) => {
@@ -436,6 +436,7 @@ export default function PlayPage() {
                 score={gameState.roundScore}
                 totalScore={gameState.totalScore}
                 currentRound={gameState.currentRound}
+                mode={mode as string}
                 onNext={actions.nextRound}
             />
         </main>

@@ -47,15 +47,16 @@ function calculateScore(distance: number): number {
   return Math.round(score)
 }
 
-function saveRoundResultToSession(roundResult: RoundResult) {
-  const key = 'uwGuessrResults';
+function saveRoundResultToSession(roundResult: RoundResult, mode?: string) {
+  // Use mode-specific keys to prevent daily/random games from interfering
+  const key = mode === 'daily' ? 'uwGuessrDailyResults' : 'uwGuessrResults';
   const existing = sessionStorage.getItem(key);
   const results: RoundResult[] = existing ? JSON.parse(existing) : [];
   results.push(roundResult);
   sessionStorage.setItem(key, JSON.stringify(results));
 }
 
-export function useGameState() {
+export function useGameState(mode?: string) {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE)
 
 
@@ -90,7 +91,7 @@ export function useGameState() {
       timeSpent
     }
 
-    saveRoundResultToSession(roundResult);
+    saveRoundResultToSession(roundResult, mode);
 
     setGameState(prev => ({
       ...prev,
@@ -131,9 +132,10 @@ export function useGameState() {
 
   const resetGame = useCallback(() => {
     // Clear session storage for new game
-    sessionStorage.removeItem('uwGuessrResults')
-    setGameState(INITIAL_GAME_STATE)
-  }, [])
+    const key = mode === 'daily' ? 'uwGuessrDailyResults' : 'uwGuessrResults';
+    sessionStorage.removeItem(key);
+    setGameState(INITIAL_GAME_STATE);
+  }, [mode])
 
   const restoreGameState = useCallback((savedState: GameState) => {
     setGameState(savedState)

@@ -117,7 +117,7 @@ export default function Component() {
       const dailyCompleted = localStorage.getItem(`uwGuessrDaily_${today}`);
       if (dailyCompleted) {
         // Already completed today's challenge, redirect to results immediately
-        sessionStorage.setItem('uwGuessrResults', dailyCompleted);
+        sessionStorage.setItem('uwGuessrDailyResults', dailyCompleted);
         router.push('/results');
         return;
       }

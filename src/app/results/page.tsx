@@ -35,7 +35,15 @@ export default function ResultsPage() {
     const markersRef = useRef<{ [key: number]: { guess: mapboxgl.Marker, actual: mapboxgl.Marker } }>({});
 
     useEffect(() => {
-        const savedResults = sessionStorage.getItem('uwGuessrResults');
+        // Try both mode-specific keys, preferring daily if both exist
+        let savedResults = sessionStorage.getItem('uwGuessrDailyResults');
+        let wasDaily = true;
+        
+        if (!savedResults) {
+            savedResults = sessionStorage.getItem('uwGuessrResults');
+            wasDaily = false;
+        }
+        
         const savedResultsHistory = sessionStorage.getItem('uwGuessrResultsHistory');
         
         if (savedResults) {
@@ -46,13 +54,13 @@ export default function ResultsPage() {
             
             // Check if this was a daily challenge by checking the URL referrer or stored mode
             const currentGame = sessionStorage.getItem('uwGuessrCurrentGame');
-            const wasDaily = currentGame && JSON.parse(currentGame).mode === 'daily';
+            const gameDataDaily = currentGame && JSON.parse(currentGame).mode === 'daily';
             
             // Also check if we came from daily play page
             const referrer = document.referrer;
             const fromDaily = referrer.includes('/play/daily');
             
-            if (wasDaily || fromDaily) {
+            if (wasDaily || gameDataDaily || fromDaily) {
                 const today = new Date().toISOString().split('T')[0];
                 localStorage.setItem(`uwGuessrDaily_${today}`, savedResults);
                 // Clear progress since they've completed it
@@ -169,13 +177,18 @@ export default function ResultsPage() {
 
     const handlePlayAgain = () => {
         // Move current results to history before clearing
-        const currentResults = sessionStorage.getItem('uwGuessrResults');
+        let currentResults = sessionStorage.getItem('uwGuessrDailyResults');
+        if (!currentResults) {
+            currentResults = sessionStorage.getItem('uwGuessrResults');
+        }
+        
         if (currentResults) {
             sessionStorage.setItem('uwGuessrResultsHistory', currentResults);
         }
         
-        // Clear current game data
+        // Clear both mode-specific session storage keys
         sessionStorage.removeItem('uwGuessrResults');
+        sessionStorage.removeItem('uwGuessrDailyResults');
         sessionStorage.removeItem('uwGuessrCurrentGame');
         
         // Evict photo cache to force fresh images (safer than clearStore)
