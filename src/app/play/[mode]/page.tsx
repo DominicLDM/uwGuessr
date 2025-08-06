@@ -56,6 +56,7 @@ export default function PlayPage() {
     const [images, setImages] = useState<Photo[]>([]);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isMobile, setIsMobile] = useState<boolean | null>(null); // Start as null to prevent flickering
+    const [imageWidth, setImageWidth] = useState<number>(600); // Track actual image width
     
     const { gameState, actions } = useGameState()
 
@@ -175,7 +176,11 @@ export default function PlayPage() {
                                         width: 'auto',
                                         height: 'auto'
                                     }}
-                                    onLoad={() => setImageLoaded(true)}
+                                    onLoad={(e) => {
+                                        setImageLoaded(true)
+                                        const img = e.target as HTMLImageElement
+                                        setImageWidth(img.offsetWidth)
+                                    }}
                                     onError={() => setImageLoaded(false)}
                                 />
                                 </TransformComponent>
@@ -200,6 +205,7 @@ export default function PlayPage() {
                             isExpanded={gameState.isMapExpanded}
                             onToggleExpanded={actions.toggleMapExpanded}
                             disabled={gameState.gamePhase === 'results'}
+                            imageWidth={imageWidth}
                         />
                     ) : (
                         <GameMapMobile 

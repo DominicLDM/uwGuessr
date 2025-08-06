@@ -13,6 +13,7 @@ interface GameMapProps {
   onToggleExpanded: () => void
   disabled?: boolean
   showSubmitButton?: boolean
+  imageWidth?: number
 }
 
 export default function GameMap({ 
@@ -22,6 +23,7 @@ export default function GameMap({
   isExpanded, 
   onToggleExpanded,
   disabled = false,
+  imageWidth = 600, // Default fallback
 }: GameMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -154,6 +156,36 @@ export default function GameMap({
     }
   }, [userGuess])
 
+  // Calculate available space based on actual image width
+  const getExpandedWidth = () => {
+    if (!isExpanded) return '20rem'
+    
+    const availableSpace = window.innerWidth - (imageWidth + 80 + 64) // imageWidth + margins + padding (4rem = 64px)
+    const minDesiredWidth = 600 // Minimum width for good aspect ratio
+    
+    if (availableSpace < minDesiredWidth) {
+      // If not enough space, expand to a larger fixed size that might overlap slightly
+      return `${minDesiredWidth}px`
+    }
+    
+    return `calc(100vw - ${imageWidth + 80}px - 4rem)`
+  }
+
+  // Calculate a proportional height that maintains good aspect ratio
+  const getExpandedHeight = () => {
+    if (!isExpanded) return '16rem'
+    
+    const availableSpace = window.innerWidth - (imageWidth + 80 + 64)
+    const mapWidth = availableSpace < 600 ? 600 : availableSpace
+    
+    const aspectRatioHeight = mapWidth * 0.75 // 4:3 ratio
+    const maxReasonableHeight = window.innerHeight * 0.67 // Max 6 7 *hands*
+    const minHeight = 400 // Minimum useful height
+    
+    const calculatedHeight = Math.min(aspectRatioHeight, maxReasonableHeight)
+    return `${Math.max(calculatedHeight, minHeight)}px`
+  }
+
   // Handle delayed collapse
   const handleMouseEnter = () => {
     if (collapseTimeout) {
@@ -190,10 +222,17 @@ return (
       className={`
         border-4 border-black rounded-xl shadow-2xl
         transition-all duration-300 ease-in-out
-        ${isExpanded ? 'w-160 h-128' : 'w-80 h-64'}
         relative overflow-hidden
         bg-gray-200
       `}
+      style={{
+        width: getExpandedWidth(),
+        height: isExpanded ? getExpandedHeight() : '16rem',
+        maxWidth: isExpanded ? 'none' : getExpandedWidth(), // Remove maxWidth constraint when expanded
+        maxHeight: isExpanded ? 'none' : '16rem', // Remove maxHeight constraint when expanded
+        minWidth: isExpanded ? '600px' : '20rem', // Ensure good aspect ratio
+        minHeight: isExpanded ? '400px' : '16rem', // Ensure minimum usable height
+      }}
     >
       {/* Loading overlay */}
       <div className={`
@@ -232,12 +271,18 @@ return (
     </div>
 
     {/* Submit Button */}
-    <div className={`
-      mt-2 rounded-xl shadow-2xl border-4 border-black
-      transition-all duration-300 ease-in-out
-      ${isExpanded ? 'w-160' : 'w-80'}
-      ${userGuess ? 'bg-yellow-400' : 'bg-gray-300'}
-    `}>
+    <div 
+      className={`
+        mt-2 rounded-xl shadow-2xl border-4 border-black
+        transition-all duration-300 ease-in-out
+        ${userGuess ? 'bg-yellow-400' : 'bg-gray-300'}
+      `}
+      style={{
+        width: getExpandedWidth(),
+        maxWidth: isExpanded ? 'none' : getExpandedWidth(), // Remove maxWidth constraint when expanded  
+        minWidth: isExpanded ? '600px' : '20rem', // Ensure good aspect ratio
+      }}
+    >
       <button
         onClick={onSubmitGuess}
         disabled={!userGuess}
