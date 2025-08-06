@@ -266,7 +266,7 @@ export default function ResultsPage() {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col sm:flex-row gap-3 px-4 pb-4 overflow-hidden min-h-0">
                 {/* Map Section */}
-                <div className="h-80 flex-shrink-0">
+                <div className="h-80 sm:h-auto sm:flex-[2] flex-shrink-0">
                     <div className="h-full relative bg-white rounded-3xl border-4 border-black overflow-hidden shadow-lg">
                         <div 
                             ref={mapContainer} 
