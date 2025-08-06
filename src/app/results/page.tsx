@@ -254,7 +254,7 @@ export default function ResultsPage() {
     }
 
     return (
-        <div className="h-screen w-screen flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
+        <div className="h-screen w-screen flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)", height: "100svh" }}>
             {/* Header */}
             <div className="flex justify-center items-center py-3 px-4 flex-shrink-0">
                 <div className="text-center">
@@ -266,7 +266,7 @@ export default function ResultsPage() {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col sm:flex-row gap-3 px-4 pb-4 overflow-hidden min-h-0">
                 {/* Map Section */}
-                <div className="h-80 sm:h-auto sm:flex-[2] flex-shrink-0">
+                <div className="flex-1 sm:flex-[2] flex-shrink-0">
                     <div className="h-full relative bg-white rounded-3xl border-4 border-black overflow-hidden shadow-lg">
                         <div 
                             ref={mapContainer} 
@@ -284,10 +284,10 @@ export default function ResultsPage() {
                 </div>
 
                 {/* Results Panel */}
-                <div className="flex-1 lg:w-auto flex flex-col min-h-0">
+                <div className="flex-shrink-0 sm:flex-1 lg:w-auto flex flex-col min-h-0">
                     {/* Round Results */}
                     <div className="flex-1 bg-white rounded-3xl border-4 border-black p-3 mb-3 flex flex-col min-h-0">
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-y-auto max-h-36s sm:max-h-none">
                             <div className="space-y-3 lg:space-y-4 pb-2">
                                 {results.map((result, index) => (
                                     <div 
