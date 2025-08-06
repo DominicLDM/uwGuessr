@@ -287,7 +287,7 @@ export default function ResultsPage() {
                 <div className="flex-shrink-0 sm:flex-1 lg:w-auto flex flex-col min-h-0">
                     {/* Round Results */}
                     <div className="flex-1 bg-white rounded-3xl border-4 border-black p-3 mb-3 flex flex-col min-h-0">
-                        <div className="flex-1 overflow-y-auto max-h-36s sm:max-h-none">
+                        <div className="flex-1 overflow-y-auto max-h-36 sm:max-h-none">
                             <div className="space-y-3 lg:space-y-4 pb-2">
                                 {results.map((result, index) => (
                                     <div 
