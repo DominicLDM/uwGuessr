@@ -84,6 +84,15 @@ export default function Component() {
 
   const handleNavigation = (path: string) => {
     setIsNavigating(true)
+    
+    // If navigating to play page, set fresh start flag and evict cache
+    if (path.startsWith('/play/')) {
+      sessionStorage.setItem('uwGuessrFreshStart', 'true')
+      // Evict both random and daily photos to ensure fresh data
+      client.cache.evict({ fieldName: "randomPhotos" });
+      client.cache.evict({ fieldName: "dailyPhotos" });
+    }
+    
     router.push(path)
   }
 

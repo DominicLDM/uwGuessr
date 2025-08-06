@@ -58,10 +58,6 @@ function saveRoundResultToSession(roundResult: RoundResult) {
 export function useGameState() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE)
 
-  // Clear session storage when component mounts (new game starts)
-  useEffect(() => {
-    sessionStorage.removeItem('uwGuessrResults')
-  }, [])
 
   const placeGuess = useCallback((lat: number, lng: number) => {
     setGameState(prev => ({
@@ -134,7 +130,13 @@ export function useGameState() {
   }, [])
 
   const resetGame = useCallback(() => {
+    // Clear session storage for new game
+    sessionStorage.removeItem('uwGuessrResults')
     setGameState(INITIAL_GAME_STATE)
+  }, [])
+
+  const restoreGameState = useCallback((savedState: GameState) => {
+    setGameState(savedState)
   }, [])
 
   const actions = useMemo(() => ({
@@ -143,8 +145,9 @@ export function useGameState() {
     nextRound,
     toggleMapExpanded,
     startRound,
-    resetGame
-  }), [placeGuess, submitGuess, nextRound, toggleMapExpanded, startRound, resetGame])
+    resetGame,
+    restoreGameState
+  }), [placeGuess, submitGuess, nextRound, toggleMapExpanded, startRound, resetGame, restoreGameState])
 
   return {
     gameState,

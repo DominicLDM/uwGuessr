@@ -41,22 +41,17 @@ export default function GameMap({
       bearing: -20,
       antialias: true,
       fadeDuration: 0,
+      maxTileCacheSize: 50, // Reduce tile cache for faster initial load
     })
 
-    // Wait for map to fully load before showing
+    // Wait for map to load and show it quickly
     map.on('load', () => {
       console.log('Map loaded successfully')
       setMapLoaded(true)
-    })
-
-    map.on('idle', () => {
-      if (mapLoaded && !mapFullyReady) {
-        console.log('Map tiles fully loaded, showing map')
-        // Add a small delay to ensure everything is rendered
-        setTimeout(() => {
-          setMapFullyReady(true)
-        }, 100)
-      }
+      // Show map after a short delay to ensure initial render
+      setTimeout(() => {
+        setMapFullyReady(true)
+      }, 100)
     })
 
     map.on('error', (e) => {

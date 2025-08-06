@@ -168,6 +168,40 @@ export default function ResultsPopUp({
       .extend([userGuess.lng, userGuess.lat])
       .extend([actualLocation.lng, actualLocation.lat]);
 
+    // Get current map center and calculate distance to new bounds center
+    const currentCenter = mapRef.current.getCenter();
+    const boundsCenter = bounds.getCenter();
+    
+    // Calculate distance between current center and new bounds center (in degrees)
+    const deltaLat = Math.abs(currentCenter.lat - boundsCenter.lat);
+    const deltaLng = Math.abs(currentCenter.lng - boundsCenter.lng);
+    const panDistance = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng);
+    
+    // Calculate zoom time based on pan distance
+    // Base time of 600ms, add time based on distance
+    // For UW campus scale: 0.01 degrees ≈ ~1km, adjusted for shorter distances
+    let zoomTime: number;
+    
+    if (currentRound === 1) {
+      // First round always gets longer time since we're zooming from world view
+      zoomTime = 2500;
+    } else if (panDistance > 0.015) {
+      // Long distance pan within campus (>~1.5km)
+      zoomTime = 2000;
+    } else if (panDistance > 0.01) {
+      // Medium distance pan (~1-1.5km)
+      zoomTime = 1700;
+    } else if (panDistance > 0.005) {
+      // Short distance pan (~500m-1km)
+      zoomTime = 1500;
+    } else if (panDistance > 0.002) {
+      // Very short distance pan (~200-500m)
+      zoomTime = 1400;
+    } else {
+      // Minimal pan distance (<200m)
+      zoomTime = 1300;
+    }
+
     // Get dynamic padding based on screen size and bottom bar
     const bottomBarHeight = bottomBarRef.current?.offsetHeight || 120;
     const isMobile = window.innerWidth < 640;
@@ -177,8 +211,6 @@ export default function ResultsPopUp({
       left: isMobile ? 50 : 125,
       right: isMobile ? 50 : 125
     };
-
-    const zoomTime = currentRound === 1 ? 2500 : distance > 500 ? 2000 : distance > 100 ? 1600 : 1200;
 
     // Fit to bounds with animation
     mapRef.current.fitBounds(bounds, {
@@ -325,6 +357,8 @@ export default function ResultsPopUp({
         lineAnimationRef.current();
         lineAnimationRef.current = null;
       }
+      // Clear the current game state but keep results
+      sessionStorage.removeItem('uwGuessrCurrentGame');
       router.push('/results');
       return;
     }

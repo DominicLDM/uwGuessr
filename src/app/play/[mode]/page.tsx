@@ -1,6 +1,6 @@
 "use client"
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from 'react'
 import { useQuery, gql } from '@apollo/client';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
@@ -9,6 +9,7 @@ import { Photo } from '@/types/game'
 import GameMap from '@/components/GameMap'
 import GameMapMobile from '@/components/GameMapMobile';
 import ResultsPopUp from '@/components/ResultsPopUp';
+import { Home } from 'lucide-react';
 
 const GET_RANDOM_PHOTOS = gql`
 query GetRandomPhotos($count: Int!) {
@@ -59,21 +60,89 @@ export default function PlayPage() {
     const [mapDetail, setMapDetail] = useState<'high' | 'low'>('high'); // Map detail state for desktop background
     
     const { gameState, actions } = useGameState()
+    const router = useRouter();
 
     const params = useParams();
     const { mode } = params;
 
-    const { data, error } = useQuery(
+    // Game state persistence functions
+    const saveGameState = (gameState: any, images: Photo[]) => {
+        sessionStorage.setItem('uwGuessrCurrentGame', JSON.stringify({
+            gameState,
+            images,
+            mode
+        }));
+    };
+
+    const loadGameState = () => {
+        const saved = sessionStorage.getItem('uwGuessrCurrentGame');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        return null;
+    };
+
+    const { data, error, refetch } = useQuery(
         mode === "random" ? GET_RANDOM_PHOTOS : GET_DAILY_PHOTOS,
-        { variables: { count: 5 }, skip: !mode }
+        { 
+            variables: { count: 5 }, 
+            skip: !mode,
+            fetchPolicy: 'cache-and-network', // Always check for fresh data
+            notifyOnNetworkStatusChange: true
+        }
     );
 
     useEffect(() => {
-        if (data) {
-            setImages(mode === "random" ? data.randomPhotos : data.dailyPhotos);
-            actions.startRound(); // Start the round timer
+        // Check if this is a fresh start (navigated from home page or results)
+        const isFreshStart = sessionStorage.getItem('uwGuessrFreshStart');
+        
+        if (isFreshStart) {
+            // Clear the fresh start flag and any existing game data
+            sessionStorage.removeItem('uwGuessrFreshStart');
+            sessionStorage.removeItem('uwGuessrCurrentGame');
+            
+            // Force refetch of fresh data
+            refetch().then((result) => {
+                const newImages = mode === "random" ? result.data.randomPhotos : result.data.dailyPhotos;
+                setImages(newImages);
+                actions.resetGame();
+                actions.startRound();
+                
+                // Save initial state
+                saveGameState(gameState, newImages);
+            }).catch((err) => {
+                console.error('Failed to fetch fresh images:', err);
+            });
+            return;
         }
-    }, [data, mode]);
+        
+        // Try to restore existing game state (page refresh scenario)
+        const savedGame = loadGameState();
+        if (savedGame && savedGame.mode === mode && data) {
+            // Restore images first
+            setImages(savedGame.images);
+            
+            // Restore the saved game state (this contains the roundResults)
+            actions.restoreGameState(savedGame.gameState);
+            return;
+        }
+        
+        if (data) {
+            const newImages = mode === "random" ? data.randomPhotos : data.dailyPhotos;
+            setImages(newImages);
+            actions.startRound();
+            
+            // Save initial state
+            saveGameState(gameState, newImages);
+        }
+    }, [data, mode, refetch]);
+
+    // Save game state whenever it changes
+    useEffect(() => {
+        if (images.length > 0) {
+            saveGameState(gameState, images);
+        }
+    }, [gameState, images]);
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 640);
@@ -136,8 +205,16 @@ export default function PlayPage() {
                         </div>
                     </div>
                     
-                    {/* 2D/3D Toggle */}
-                    <div className="mt-3.5 flex justify-end">
+                    {/* 2D/3D Toggle and Home button */}
+                    <div className="mt-3.5 flex justify-end gap-2">
+                        <button 
+                            onClick={() => {
+                                router.push('/');
+                            }}
+                            className="bg-black/70 text-white px-2.5 py-2 rounded-lg text-lg font-bold hover:bg-black/90 cursor-pointer shadow-2xl border-2 border-white/20 flex items-center gap-1"
+                        >
+                            <Home size={16} />
+                        </button>
                         <button 
                             onClick={() => setMapDetail(mapDetail === 'high' ? 'low' : 'high')} 
                             className="bg-black/70 text-white px-2.5 py-2 rounded-lg text-sm font-bold hover:bg-black/90 cursor-pointer shadow-2xl border-2 border-white/20"
