@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useQuery, gql } from '@apollo/client';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useGameState } from '@/hooks/useGameState'
@@ -142,6 +142,17 @@ export default function PlayPage() {
         return () => window.removeEventListener("resize", check);
     }, []);
 
+    // Memoize callbacks to prevent unnecessary re-renders
+    const handleSubmitGuess = useCallback(() => {
+        if (images[gameState.currentRound - 1]) {
+            actions.submitGuess(images[gameState.currentRound - 1]);
+        }
+    }, [actions, images, gameState.currentRound]);
+
+    const handleToggleMapDetail = useCallback(() => {
+        setMapDetail(prev => prev === 'high' ? 'low' : 'high');
+    }, []);
+
     if (error) {
         return <main className="p-4 text-red-600">Error: {error.message}</main>;
     }
@@ -153,13 +164,25 @@ export default function PlayPage() {
                 <div className="absolute inset-0 w-full h-full z-0">
                     <GameMap 
                         onPlaceGuess={actions.placeGuess}
-                        onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                        onSubmitGuess={handleSubmitGuess}
                         userGuess={gameState.userGuess}
                         disabled={gameState.gamePhase === 'results'}
-                        onToggleMapDetail={() => setMapDetail(mapDetail === 'high' ? 'low' : 'high')}
+                        onToggleMapDetail={handleToggleMapDetail}
                         mapDetail={mapDetail}
                     />
                 </div>
+            )}
+
+            {/* Mobile: Game Map - Only render when mobile */}
+            {isMobile !== null && isMobile && (
+                <GameMapMobile 
+                    onPlaceGuess={actions.placeGuess}
+                    onSubmitGuess={handleSubmitGuess}
+                    userGuess={gameState.userGuess}
+                    isExpanded={gameState.isMapExpanded}
+                    onToggleExpanded={actions.toggleMapExpanded}
+                    disabled={gameState.gamePhase === 'results'}
+                />
             )}
 
             {/* Desktop: Floating score card */}
@@ -209,6 +232,7 @@ export default function PlayPage() {
                         <button 
                             onClick={() => setMapDetail(mapDetail === 'high' ? 'low' : 'high')} 
                             className="bg-black/70 text-white px-2.5 py-2 rounded-lg text-sm font-bold hover:bg-black/90 cursor-pointer shadow-2xl border-2 border-white/20"
+                            title={`Switch to ${mapDetail === 'high' ? '2D' : '3D'} view`}
                         >
                             {mapDetail === 'high' ? '3D' : '2D'}
                         </button>
@@ -280,7 +304,7 @@ export default function PlayPage() {
                         ${gameState.userGuess ? 'bg-yellow-400' : 'bg-gray-300'}
                     `}>
                         <button
-                            onClick={() => actions.submitGuess(images[gameState.currentRound - 1])}
+                            onClick={handleSubmitGuess}
                             disabled={!gameState.userGuess}
                             className={`
                                 w-full py-3 px-6 rounded-lg font-bold text-lg
@@ -388,16 +412,6 @@ export default function PlayPage() {
                                 </div>
                             </div>
                         </div>
-                        
-                        {/* Mobile Game Map */}
-                        <GameMapMobile 
-                            onPlaceGuess={actions.placeGuess}
-                            onSubmitGuess={() => actions.submitGuess(images[gameState.currentRound - 1])}
-                            userGuess={gameState.userGuess}
-                            isExpanded={gameState.isMapExpanded}
-                            onToggleExpanded={actions.toggleMapExpanded}
-                            disabled={gameState.gamePhase === 'results'}
-                        />
                     </div>
                 </div>
             )}

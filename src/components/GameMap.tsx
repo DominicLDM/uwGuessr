@@ -24,13 +24,19 @@ export default function GameMap({
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markerRef = useRef<mapboxgl.Marker | null>(null)
+  const initializingRef = useRef(false) // Prevent double initialization
+  const currentMapDetailRef = useRef<'high' | 'low'>('high') // Track current map detail to prevent unnecessary changes
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapFullyReady, setMapFullyReady] = useState(false)
   const mapDetail = externalMapDetail
 
   // Initialize map once and keep it
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return
+    if (!mapContainer.current || mapRef.current || initializingRef.current) {
+      return
+    }
+
+    initializingRef.current = true
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
@@ -39,14 +45,13 @@ export default function GameMap({
       zoom: 16,
       pitch: 0,
       bearing: -20,
-      antialias: true,
+      antialias: false,
       fadeDuration: 0,
       maxTileCacheSize: 50, // Reduce tile cache for faster initial load
     })
 
     // Wait for map to load and show it quickly
     map.on('load', () => {
-      console.log('Map loaded successfully')
       setMapLoaded(true)
       // Show map after a short delay to ensure initial render
       setTimeout(() => {
@@ -61,7 +66,6 @@ export default function GameMap({
     mapRef.current = map
 
     return () => {
-      console.log('Cleaning up map')
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
@@ -69,6 +73,8 @@ export default function GameMap({
       // Reset states on cleanup
       setMapLoaded(false)
       setMapFullyReady(false)
+      initializingRef.current = false
+      currentMapDetailRef.current = 'high'
     }
   }, []) // Only initialize once
 
@@ -133,26 +139,26 @@ export default function GameMap({
 
   // Handle map style change after map is loaded
   useEffect(() => {
-    if (mapRef.current && mapLoaded) {
-      const style = mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12';
-      console.log('Changing map style to:', mapDetail, 'Current style:', mapRef.current.getStyle().name);
-      
-      // Only change if it's different from current style
-      const currentStyle = mapRef.current.getStyle();
-      const newStyleId = mapDetail === 'high' ? 'standard' : 'streets-v12';
-      
-      if (!currentStyle.name || !currentStyle.name.includes(newStyleId)) {
-        // Hide map during style change
-        setMapFullyReady(false);
-        mapRef.current.setStyle(style);
-        
-        // Wait for the new style to load completely
-        mapRef.current.once('idle', () => {
-          setTimeout(() => {
-            setMapFullyReady(true);
-          }, 150);
-        });
+    if (mapRef.current && mapLoaded && mapDetail) {
+      // Skip if we're already using the requested detail level
+      if (currentMapDetailRef.current === mapDetail) {
+        return;
       }
+
+      const style = mapDetail === 'high' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/streets-v12';
+      
+      currentMapDetailRef.current = mapDetail;
+      
+      // Hide map during style change
+      setMapFullyReady(false);
+      mapRef.current.setStyle(style);
+      
+      // Wait for the new style to load completely
+      mapRef.current.once('idle', () => {
+        setTimeout(() => {
+          setMapFullyReady(true);
+        }, 150);
+      });
     }
   }, [mapDetail, mapLoaded])
 

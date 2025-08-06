@@ -28,11 +28,16 @@ export default function GameMap({
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markerRef = useRef<mapboxgl.Marker | null>(null)
+  const initializingRef = useRef(false) // Prevent double initialization
   const [mapLoaded, setMapLoaded] = useState(false)
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return
+    if (!mapContainer.current || mapRef.current || initializingRef.current) {
+      return
+    }
+
+    initializingRef.current = true
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
@@ -41,12 +46,11 @@ export default function GameMap({
       zoom: 16,
       pitch: 0,
       bearing: -20,
-      antialias: true,
+      antialias: false,
     })
 
     // Wait for map to fully load before showing
     map.on('load', () => {
-      console.log('Map loaded successfully')
       setMapLoaded(true)
     })
 
@@ -57,11 +61,11 @@ export default function GameMap({
     mapRef.current = map
 
     return () => {
-      console.log('Cleaning up map')
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
       }
+      initializingRef.current = false
     }
   }, []) // Only initialize once
 

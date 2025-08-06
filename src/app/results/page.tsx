@@ -62,7 +62,7 @@ export default function ResultsPage() {
                 style: 'mapbox://styles/mapbox/streets-v12',
                 center: [-80.5417, 43.4723], // Default center
                 zoom: 16,
-                antialias: true,
+                antialias: false,
                 preserveDrawingBuffer: false,
                 refreshExpiredTiles: false,
                 maxTileCacheSize: 50
@@ -210,14 +210,34 @@ export default function ResultsPage() {
             // Zoom to the selected round's markers
             if (results && results[roundIndex]) {
                 const result = results[roundIndex];
-                const bounds = new mapboxgl.LngLatBounds()
-                bounds.extend([result.actualLocation.lng, result.actualLocation.lat])
-                bounds.extend([result.userGuess.lng, result.userGuess.lat])
                 
-                mapRef.current.fitBounds(bounds, { 
-                    padding: 100,
-                    maxZoom: 18
-                })
+                // Calculate the center point between the two markers
+                const centerLat = (result.actualLocation.lat + result.userGuess.lat) / 2;
+                const centerLng = (result.actualLocation.lng + result.userGuess.lng) / 2;
+                
+                // Calculate distance between points to determine zoom
+                const latDiff = Math.abs(result.actualLocation.lat - result.userGuess.lat);
+                const lngDiff = Math.abs(result.actualLocation.lng - result.userGuess.lng);
+                const maxDiff = Math.max(latDiff, lngDiff);
+                
+                let zoom;
+                if (maxDiff < 0.001) { // Very close (< ~100m)
+                    zoom = 17;
+                } else if (maxDiff < 0.005) { // Close (< ~500m) 
+                    zoom = 15;
+                } else if (maxDiff < 0.02) { // Medium (< ~2km)
+                    zoom = 13;
+                } else if (maxDiff < 0.1) { // Far (< ~10km)
+                    zoom = 11;
+                } else { // Very far
+                    zoom = 9;
+                }
+                
+                mapRef.current.flyTo({
+                    center: [centerLng, centerLat],
+                    zoom: zoom,
+                    duration: 1000
+                });
             }
         }
     }
@@ -236,17 +256,17 @@ export default function ResultsPage() {
     return (
         <div className="h-screen w-screen flex flex-col" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
             {/* Header */}
-            <div className="flex justify-center items-center py-3 px-4">
+            <div className="flex justify-center items-center py-3 px-4 flex-shrink-0">
                 <div className="text-center">
                     <h1 className="text-xl sm:text-4xl font-bold mb-1 text-black">Game Results</h1>
-                    <div className="text-base sm:text-xl font-semibold text-yellow-600">Total Score: {totalScore.toLocaleString()}</div>
+                    <div className="text-base sm:text-2xl text-lg font-bold text-yellow-600">Total Score: {totalScore.toLocaleString()}</div>
                 </div>
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col sm:flex-row gap-3 px-4 pb-4 overflow-hidden">
+            <div className="flex-1 flex flex-col sm:flex-row gap-3 px-4 pb-4 overflow-hidden min-h-0">
                 {/* Map Section */}
-                <div className="h-48 sm:h-auto sm:flex-[2]">
+                <div className="h-64 sm:h-auto sm:flex-[2] flex-shrink-0">
                     <div className="h-full relative bg-white rounded-3xl border-4 border-black overflow-hidden shadow-lg">
                         <div 
                             ref={mapContainer} 

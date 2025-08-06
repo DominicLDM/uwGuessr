@@ -57,6 +57,8 @@ const PING_QUERY = gql`
 export default function Component() {
   const [isGooseMode, setIsGooseMode] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
+  const [isAboutAnimating, setIsAboutAnimating] = useState(false)
   const router = useRouter()
   const client = useApolloClient()
 
@@ -94,6 +96,19 @@ export default function Component() {
     }
     
     router.push(path)
+  }
+
+  const handleShowAbout = () => {
+    setShowAbout(true)
+    // Use requestAnimationFrame for smoother animation
+    requestAnimationFrame(() => {
+      setIsAboutAnimating(true)
+    })
+  }
+
+  const handleCloseAbout = () => {
+    setIsAboutAnimating(false)
+    setTimeout(() => setShowAbout(false), 200) // Reduced timeout
   }
 
   return (
@@ -211,9 +226,9 @@ export default function Component() {
       {/* Footer */}
       <footer className="py-6 px-6 text-center relative z-10">
         <div className="flex justify-center gap-8 mb-4 text-sm">
-          <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors">
+          <button onClick={handleShowAbout} className="text-slate-900 hover:text-yellow-500 transition-colors">
             About
-          </Link>
+          </button>
           <Link href="https://www.instagram.com/dom_ldm/" className="text-slate-900 hover:text-yellow-500 transition-colors">
             Contact
           </Link>
@@ -232,6 +247,85 @@ export default function Component() {
           © 2025 {isGooseMode ? "uwGeesr" : "uwGuessr"}. Made with ❤️ and Slushies.
         </p>
       </footer>
+
+      {/* About Modal */}
+      {showAbout && (
+        <div 
+          className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-opacity duration-200 ease-out ${
+            isAboutAnimating ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={handleCloseAbout}
+        >
+          <div 
+            className={`bg-white rounded-3xl border-4 border-black shadow-2xl max-w-sm sm:max-w-md md:max-w-lg w-full max-h-[80vh] overflow-hidden transition-all duration-200 ease-out ${
+              isAboutAnimating ? 'scale-100' : 'scale-95'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-3 sm:p-4 pb-2 sm:pb-3 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg sm:text-xl font-bold text-black">
+                  About <span className="text-yellow-500">uw</span>{isGooseMode ? "Geesr" : "Guessr"}
+                </h2>
+                <button
+                  onClick={handleCloseAbout}
+                  className="w-7 h-7 sm:w-8 sm:h-8 cursor-pointer rounded-full hover:text-yellow-500 flex items-center justify-center transition-colors text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3 text-xs sm:text-sm">
+              <p className="text-gray-800 leading-relaxed">
+                <span className="font-semibold text-yellow-500">uw</span><span className="font-semibold">Guessr</span> is a geography guessing game where you explore the University of Waterloo campus.
+              </p>
+              
+              <p className="text-gray-700 leading-relaxed">
+                Inspired by <span className="text-blue-500 font-semibold">Geoguessr</span> and <span className="text-red-400 font-semibold">Timeguessr</span>, this game challenges you to identify locations around campus based on photos submitted by the community.
+              </p>
+
+              <div className="space-y-1 sm:space-y-2">
+                <h3 className="font-semibold text-black">How to Play</h3>
+                <ul className="text-gray-700 space-y-0.5 sm:space-y-1 ml-3 sm:ml-4">
+                  <li>• View a photo from somewhere on campus</li>
+                  <li>• Click on the map where you think it was taken</li>
+                  <li>• Earn points based on your accuracy</li>
+                </ul>
+              </div>
+
+              <div className="space-y-1 sm:space-y-2">
+                <h3 className="font-semibold text-black">User Content</h3>
+                <p className="text-gray-700">
+                  Photos are submitted by community members who retain ownership of their images. By uploading content, users grant <span className="font-semibold"><span className="text-yellow-500">uw</span>Guessr</span> permission to display their photos within the game for educational and entertainment purposes.
+                </p>
+              </div>
+
+              <div className="space-y-1 sm:space-y-2">
+                <h3 className="font-semibold text-black">Brand Usage</h3>
+                <p className="text-gray-700">
+                  This is an unofficial, fan-made project created for educational purposes. Any use of University of Waterloo branding or references is purely for identification and educational context, and is not intended to imply endorsement or official affiliation.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-2 sm:pt-3 mt-3 sm:mt-4 border-t border-gray-200 text-center">
+                Made by{" "}
+                <a
+                  href="https://www.linkedin.com/in/dominic-ldm/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-400 hover:text-indigo-800 hover:underline font-medium transition-colors cursor-pointer"
+                >
+                  Dominic
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </>
   )

@@ -32,7 +32,7 @@ export default function UploadPage() {
             zoom: 16,
             pitch: 0,
             bearing: -20,
-            antialias: true,
+            antialias: false,
             // Performance optimizations
             preserveDrawingBuffer: false,
             refreshExpiredTiles: false,
