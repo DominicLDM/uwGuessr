@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { GameState, Photo, RoundResult } from '@/types/game'
 
 const INITIAL_GAME_STATE: GameState = {

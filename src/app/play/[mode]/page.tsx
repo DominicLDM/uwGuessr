@@ -10,6 +10,7 @@ import GameMap from '@/components/GameMap'
 import GameMapMobile from '@/components/GameMapMobile';
 import ResultsPopUp from '@/components/ResultsPopUp';
 import { Home } from 'lucide-react';
+import { GameState } from '@/types/game';
 
 const GET_RANDOM_PHOTOS = gql`
 query GetRandomPhotos($count: Int!) {
@@ -43,16 +44,6 @@ query GetDailyPhotos($count: Int!) {
 }
 `;
 
-// type GameState = {
-//   currentRound: number
-//   totalScore: number
-//   roundScore: number
-//   userGuess: { lat: number; lng: number } | null
-//   isMapExpanded: boolean
-//   showResults: boolean
-//   gamePhase: 'playing' | 'guessing' | 'results' | 'complete'
-// }
-
 export default function PlayPage() {
     const [images, setImages] = useState<Photo[]>([]);
     const [imageLoaded, setImageLoaded] = useState(false);
@@ -66,7 +57,7 @@ export default function PlayPage() {
     const { mode } = params;
 
     // Game state persistence functions
-    const saveGameState = (gameState: any, images: Photo[]) => {
+    const saveGameState = (gameState: GameState, images: Photo[]) => {
         sessionStorage.setItem('uwGuessrCurrentGame', JSON.stringify({
             gameState,
             images,
