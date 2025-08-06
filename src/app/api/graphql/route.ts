@@ -55,15 +55,72 @@ const resolvers = {
       return shuffled.slice(0, count);
     },
     dailyPhotos: async (_: unknown, { count }: { count: number }) => {
-      // Placeholder for daily photos - same as random for now
-      const { data, error } = await supabase
-        .from('photos')
-        .select('id, url, lat, lng')
-        .eq('status', 'approved')
-        .limit(count);
+      const today = new Date().toISOString().split('T')[0];
       
-      if (error) throw new Error(error.message);
-      return data || [];
+      // Get cached daily photos
+      const { data: cached, error: cacheError } = await supabase
+        .from('daily_photo_cache')
+        .select('photo_ids')
+        .eq('date', today)
+        .single();
+
+      let photoIds: string[] = [];
+      
+      if (cacheError && cacheError.code !== 'PGRST116') {
+        // Real error, not just no rows found
+        throw new Error(`Cache error: ${cacheError.message}`);
+      }
+      
+      if (cached) {
+        // Use cached photo IDs
+        photoIds = cached.photo_ids;
+      } else {
+        // No cached photos, generate them by calling the API
+        try {
+          const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/generate-daily`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to generate daily photos: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          photoIds = result.photoIds || [];
+        } catch (error) {
+          console.error('Failed to generate daily photos:', error);
+          // Fallback to random photos if daily generation fails
+          const { data, error: fallbackError } = await supabase
+            .from('photos')
+            .select('id')
+            .eq('status', 'approved')
+            .limit(count);
+          
+          if (fallbackError) throw new Error(fallbackError.message);
+          photoIds = (data || []).map((p: { id: string }) => p.id);
+        }
+      }
+
+      if (photoIds.length === 0) {
+        return [];
+      }
+
+      // Get full photo data for the selected IDs
+      const { data: photos, error: photosError } = await supabase
+        .from('photos')
+        .select('id, url, lat, lng, building, floor, added_by, created_at, status')
+        .in('id', photoIds)
+        .eq('status', 'approved');
+      
+      if (photosError) throw new Error(photosError.message);
+      
+      // Return photos in the same order as photoIds
+      const orderedPhotos = photoIds.map(id => 
+        photos?.find(p => p.id === id)
+      ).filter(Boolean);
+      
+      return orderedPhotos.slice(0, count);
     },
   },
   Mutation: {

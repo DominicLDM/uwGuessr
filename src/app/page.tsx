@@ -64,6 +64,28 @@ export default function Component() {
 
   // Prewarm GraphQL connection when homepage loads
   useEffect(() => {
+    // Clean up old daily data (older than 7 days)
+    const cleanupOldDailyData = () => {
+      const today = new Date();
+      const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('uwGuessrDaily_') || key.startsWith('uwGuessrDailyProgress_'))) {
+          // Extract date from key (format: uwGuessrDaily_2025-01-15 or uwGuessrDailyProgress_2025-01-15)
+          const dateStr = key.split('_')[1];
+          if (dateStr) {
+            const keyDate = new Date(dateStr);
+            if (keyDate < oneWeekAgo) {
+              localStorage.removeItem(key);
+            }
+          }
+        }
+      }
+    };
+    
+    cleanupOldDailyData();
+
     // Warm up the connection with a ping
     client.query({ 
       query: PING_QUERY,
@@ -87,12 +109,37 @@ export default function Component() {
   const handleNavigation = (path: string) => {
     setIsNavigating(true)
     
-    // If navigating to play page, set fresh start flag and evict cache
-    if (path.startsWith('/play/')) {
+    // Check for daily challenge completion before navigation
+    if (path === '/play/daily') {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if they've already completed today's challenge
+      const dailyCompleted = localStorage.getItem(`uwGuessrDaily_${today}`);
+      if (dailyCompleted) {
+        // Already completed today's challenge, redirect to results immediately
+        sessionStorage.setItem('uwGuessrResults', dailyCompleted);
+        router.push('/results');
+        return;
+      }
+      
+      // Check if they have partial progress on today's challenge
+      const dailyProgress = localStorage.getItem(`uwGuessrDailyProgress_${today}`);
+      if (dailyProgress) {
+        // They've started today's challenge, continue from where they left off
+        sessionStorage.setItem('uwGuessrCurrentGame', dailyProgress);
+        router.push(path);
+        return;
+      } else {
+        // Starting fresh daily challenge
+        sessionStorage.setItem('uwGuessrFreshStart', 'true');
+        // Evict cache for fresh daily photos
+        client.cache.evict({ fieldName: "dailyPhotos" });
+      }
+    } else if (path.startsWith('/play/')) {
+      // For non-daily play modes, always start fresh
       sessionStorage.setItem('uwGuessrFreshStart', 'true')
-      // Evict both random and daily photos to ensure fresh data
+      // Evict random photos cache
       client.cache.evict({ fieldName: "randomPhotos" });
-      client.cache.evict({ fieldName: "dailyPhotos" });
     }
     
     router.push(path)
@@ -251,13 +298,13 @@ export default function Component() {
       {/* About Modal */}
       {showAbout && (
         <div 
-          className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-opacity duration-200 ease-out ${
+          className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3 sm:p-4 transition-opacity duration-200 ease-out ${
             isAboutAnimating ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={handleCloseAbout}
         >
           <div 
-            className={`bg-white rounded-3xl border-4 border-black shadow-2xl max-w-sm sm:max-w-md md:max-w-lg w-full max-h-[80vh] overflow-hidden transition-all duration-200 ease-out ${
+            className={`bg-white rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-black shadow-2xl max-w-sm sm:max-w-md md:max-w-lg w-full transition-all duration-200 ease-out ${
               isAboutAnimating ? 'scale-100' : 'scale-95'
             }`}
             onClick={(e) => e.stopPropagation()}
@@ -265,12 +312,12 @@ export default function Component() {
             {/* Header */}
             <div className="p-3 sm:p-4 pb-2 sm:pb-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-xl font-bold text-black">
+                <h2 className="text-base sm:text-lg md:text-xl font-bold text-black">
                   About <span className="text-yellow-500">uw</span>{isGooseMode ? "Geesr" : "Guessr"}
                 </h2>
                 <button
                   onClick={handleCloseAbout}
-                  className="w-7 h-7 sm:w-8 sm:h-8 cursor-pointer rounded-full hover:text-yellow-500 flex items-center justify-center transition-colors text-lg"
+                  className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 cursor-pointer rounded-full hover:text-yellow-500 flex items-center justify-center transition-colors text-sm sm:text-base md:text-lg"
                 >
                   ✕
                 </button>

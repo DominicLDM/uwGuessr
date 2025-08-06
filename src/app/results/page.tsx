@@ -43,6 +43,22 @@ export default function ResultsPage() {
             const parsedResults: RoundResult[] = JSON.parse(savedResults);
             setResults(parsedResults);
             setTotalScore(parsedResults.reduce((sum, result) => sum + result.score, 0));
+            
+            // Check if this was a daily challenge by checking the URL referrer or stored mode
+            const currentGame = sessionStorage.getItem('uwGuessrCurrentGame');
+            const wasDaily = currentGame && JSON.parse(currentGame).mode === 'daily';
+            
+            // Also check if we came from daily play page
+            const referrer = document.referrer;
+            const fromDaily = referrer.includes('/play/daily');
+            
+            if (wasDaily || fromDaily) {
+                const today = new Date().toISOString().split('T')[0];
+                localStorage.setItem(`uwGuessrDaily_${today}`, savedResults);
+                // Clear progress since they've completed it
+                localStorage.removeItem(`uwGuessrDailyProgress_${today}`);
+                console.log('Saved daily completion for', today);
+            }
         } else if (savedResultsHistory) {
             // Show last completed game results
             const parsedResults: RoundResult[] = JSON.parse(savedResultsHistory);
@@ -51,6 +67,7 @@ export default function ResultsPage() {
         } else {
             // No results found, redirect to home
             router.push('/');
+            return;
         }
     }, [router])
 
@@ -223,7 +240,7 @@ export default function ResultsPage() {
                 let zoom;
                 if (maxDiff < 0.001) { // Very close (< ~100m)
                     zoom = 17;
-                } else if (maxDiff < 0.005) { // Close (< ~500m) 
+                } else if (maxDiff < 0.01) { // Close (< ~500m) 
                     zoom = 15;
                 } else if (maxDiff < 0.02) { // Medium (< ~2km)
                     zoom = 13;
@@ -242,15 +259,9 @@ export default function ResultsPage() {
         }
     }
 
+    // Show nothing while loading (no spinner)
     if (!results || results.length === 0) {
-        return (
-            <div className="min-h-screen bg-[hsla(46,86%,99.5%,1.00)] flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-8 h-8 border-3 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading results...</p>
-                </div>
-            </div>
-        )
+        return null;
     }
 
     return (

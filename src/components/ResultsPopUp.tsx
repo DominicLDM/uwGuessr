@@ -357,6 +357,22 @@ export default function ResultsPopUp({
         lineAnimationRef.current();
         lineAnimationRef.current = null;
       }
+      
+      // Save mode info with results for daily completion tracking
+      const currentGame = sessionStorage.getItem('uwGuessrCurrentGame');
+      if (currentGame) {
+        const gameData = JSON.parse(currentGame);
+        const savedResults = sessionStorage.getItem('uwGuessrResults');
+        if (savedResults && gameData.mode === 'daily') {
+          const today = new Date().toISOString().split('T')[0];
+          // Save final completion
+          localStorage.setItem(`uwGuessrDaily_${today}`, savedResults);
+          // Clear progress since they've completed it
+          localStorage.removeItem(`uwGuessrDailyProgress_${today}`);
+          console.log('Daily challenge completed for', today);
+        }
+      }
+      
       // Clear the current game state but keep results
       sessionStorage.removeItem('uwGuessrCurrentGame');
       router.push('/results');

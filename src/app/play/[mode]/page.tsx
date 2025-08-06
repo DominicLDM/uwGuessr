@@ -58,11 +58,20 @@ export default function PlayPage() {
 
     // Game state persistence functions
     const saveGameState = (gameState: GameState, images: Photo[]) => {
-        sessionStorage.setItem('uwGuessrCurrentGame', JSON.stringify({
+        const gameData = {
             gameState,
             images,
             mode
-        }));
+        };
+        
+        // Always save to session storage for regular game persistence
+        sessionStorage.setItem('uwGuessrCurrentGame', JSON.stringify(gameData));
+        
+        // For daily challenges, also save progress to localStorage to prevent cheating
+        if (mode === 'daily') {
+            const today = new Date().toISOString().split('T')[0];
+            localStorage.setItem(`uwGuessrDailyProgress_${today}`, JSON.stringify(gameData));
+        }
     };
 
     const loadGameState = () => {
@@ -77,8 +86,7 @@ export default function PlayPage() {
         mode === "random" ? GET_RANDOM_PHOTOS : GET_DAILY_PHOTOS,
         { 
             variables: { count: 5 }, 
-            skip: !mode,
-            fetchPolicy: 'cache-and-network', // Always check for fresh data
+            fetchPolicy: 'cache-and-network',
             notifyOnNetworkStatusChange: true
         }
     );
