@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import imageCompression from 'browser-image-compression';
-import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft, Home } from 'lucide-react';
+import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft } from 'lucide-react';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
