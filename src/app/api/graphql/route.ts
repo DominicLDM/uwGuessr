@@ -55,7 +55,11 @@ const resolvers = {
       return shuffled.slice(0, count);
     },
     dailyPhotos: async (_: unknown, { count }: { count: number }) => {
-      const today = new Date().toISOString().split('T')[0];
+      // Always use America/New_York (EDT/EST) for daily photo cache
+      const nyDate = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+      );
+      const today = nyDate.toISOString().split('T')[0];
       
       // Get cached daily photos
       const { data: cached, error: cacheError } = await supabase
