@@ -1,6 +1,3 @@
-export const config = {
-  schedule: '20 5 * * *', // 1:20am EDT (5:20am UTC)
-};
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
