@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import imageCompression from 'browser-image-compression';
-import { Upload, MapPin, Image as ImageIcon, Send } from 'lucide-react';
+import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft, Home } from 'lucide-react';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
 export default function UploadPage() {
+    const router = useRouter();
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isDragActive, setIsDragActive] = useState(false);
     const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(null);
@@ -89,6 +91,10 @@ export default function UploadPage() {
         };
     }, []);
 
+    // Use Next.js router for client-side navigation
+    const handleBackToHome = () => {
+        router.push('/');
+    };
 
     // Helper to handle a File directly
     const handleFile = async (file: File) => {
@@ -196,7 +202,19 @@ export default function UploadPage() {
                     {successMessage}
                 </div>
             )}
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+            
+            {/* Back Button */}
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+                <button
+                    onClick={handleBackToHome}
+                    className="inline-flex items-center gap-2 text-gray-600 hover:text-yellow-500 transition-colors group"
+                >
+                    <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer group-hover:-translate-x-1 transition-transform" />
+                    <span className="text-sm sm:text-base font-medium">Back to Home</span>
+                </button>
+            </div>
+
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 lg:py-8">
                 <div className="max-w-7xl mx-auto">
                     {/* Header - Responsive typography and spacing */}
                     <div className="text-center mb-8 sm:mb-12 lg:mb-16">

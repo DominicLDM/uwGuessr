@@ -46,7 +46,6 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
 
         {/* Favicon (ICO, PNG, SVG) */}
-        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icon1.png" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="icon" type="image/svg+xml" href="/icon0.svg" />
