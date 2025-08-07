@@ -109,30 +109,29 @@ export default function GameMap({
     }
   }, [disabled, onPlaceGuess])
 
-  // Handle map resize when container changes
+  // Handle map resize when container changes (debounced via rAF)
   useEffect(() => {
     if (mapRef.current && mapLoaded) {
       const map = mapRef.current
-      
-      // Resize immediately
-      map.resize()
-      
-      // Resize every 5ms during the transition
-      const resizePoints = []
-      for (let i = 5; i <= 350; i += 5) {
-        resizePoints.push(i)
+      let start: number | null = null
+      let rafId: number | null = null
+
+      const animateResize = (ts: number) => {
+        if (!start) start = ts
+        // Run for ~300ms
+        if (ts - start < 300) {
+          map.resize()
+          rafId = requestAnimationFrame(animateResize)
+        } else {
+          map.resize()
+        }
       }
-      
-      const timeouts = resizePoints.map(delay => 
-        setTimeout(() => {
-          if (map) {
-            map.resize()
-          }
-        }, delay)
-      )
-      
+
+      map.resize()
+      rafId = requestAnimationFrame(animateResize)
+
       return () => {
-        timeouts.forEach(timeout => clearTimeout(timeout))
+        if (rafId) cancelAnimationFrame(rafId)
       }
     }
   }, [mapLoaded])

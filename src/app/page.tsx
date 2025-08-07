@@ -22,11 +22,6 @@ query GetRandomPhotos($count: Int!) {
         url
         lat
         lng
-        building
-        floor
-        added_by
-        created_at
-        status
         }
 }
 `;
@@ -38,11 +33,6 @@ query GetDailyPhotos($count: Int!) {
         url
         lat
         lng
-        building
-        floor
-        added_by
-        created_at
-        status
         }
 }
 `;
@@ -155,7 +145,6 @@ export default function Component() {
 
   const handleCloseAbout = () => {
     setIsAboutAnimating(false)
-    setTimeout(() => setShowAbout(false), 200) // Reduced timeout
   }
 
   return (
@@ -188,22 +177,24 @@ export default function Component() {
               <span className="text-black flex items-center">
                 {isGooseMode ? (
                   <>
-                    <img 
-                      src="/G.svg" 
-                      alt="G" 
+                    <Image
+                      src="/G.svg"
+                      alt="G"
                       className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
-                      width="96"
-                      height="96"
+                      width={96}
+                      height={96}
+                      priority
                     />eesr
                   </>
                 ) : (
                   <>
-                    <img 
-                      src="/G.svg" 
-                      alt="G" 
+                    <Image
+                      src="/G.svg"
+                      alt="G"
                       className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
-                      width="96"
-                      height="96"
+                      width={96}
+                      height={96}
+                      priority
                     />uessr
                   </>
                 )}
@@ -279,7 +270,7 @@ export default function Component() {
           <Link href="https://www.instagram.com/dom_ldm/" className="text-slate-900 hover:text-yellow-500 transition-colors">
             Contact
           </Link>
-          <Link href="#" className="text-slate-900 hover:text-yellow-500 transition-colors" onClick={() => window.location.href = "/upload"}>
+          <Link href="/upload" className="text-slate-900 hover:text-yellow-500 transition-colors">
             Submit Photos
           </Link>
           <button
@@ -297,16 +288,23 @@ export default function Component() {
 
       {/* About Modal */}
       {showAbout && (
-        <div 
-          className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3 sm:p-4 transition-opacity duration-200 ease-out ${
+        <div
+          className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3 sm:p-4 transition-opacity duration-300 ease-in-out ${
             isAboutAnimating ? 'opacity-100' : 'opacity-0'
           }`}
+          style={{ willChange: 'opacity' }}
           onClick={handleCloseAbout}
+          onTransitionEnd={(e) => {
+            if (e.target === e.currentTarget && !isAboutAnimating) {
+              setShowAbout(false)
+            }
+          }}
         >
-          <div 
-            className={`bg-white rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-black shadow-2xl max-w-sm sm:max-w-md md:max-w-lg w-full transition-all duration-200 ease-out ${
-              isAboutAnimating ? 'scale-100' : 'scale-95'
+          <div
+            className={`bg-white rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-black shadow-2xl max-w-sm sm:max-w-md md:max-w-lg w-full transition-all duration-300 ease-in-out ${
+              isAboutAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
             }`}
+            style={{ willChange: 'transform, opacity' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

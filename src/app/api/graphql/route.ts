@@ -41,17 +41,20 @@ const resolvers = {
       return data;
     },
     randomPhotos: async (_: unknown, { count }: { count: number }) => {
-      // Get all approved photos and shuffle them
       const { data, error } = await supabase
         .from('photos')
         .select('id, url, lat, lng')
         .eq('status', 'approved');
-      
+
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) return [];
-      
-      // Shuffle the array and take the first 'count' items
-      const shuffled = data.sort(() => Math.random() - 0.5);
+
+      // Fisher-Yates shuffle
+      const shuffled = [...data];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
       return shuffled.slice(0, count);
     },
     dailyPhotos: async (_: unknown, { count }: { count: number }) => {
@@ -76,34 +79,35 @@ const resolvers = {
       }
       
       if (cached) {
-        // Use cached photo IDs
         photoIds = cached.photo_ids;
       } else {
-        // No cached photos, generate them by calling the API
-        try {
-          const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/generate-daily`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to generate daily photos: ${response.statusText}`);
-          }
-          
-          const result = await response.json();
-          photoIds = result.photoIds || [];
-        } catch (error) {
-          console.error('Failed to generate daily photos:', error);
-          // Fallback to random photos if daily generation fails
-          const { data, error: fallbackError } = await supabase
-            .from('photos')
-            .select('id')
-            .eq('status', 'approved')
-            .limit(count);
-          
-          if (fallbackError) throw new Error(fallbackError.message);
-          photoIds = (data || []).map((p: { id: string }) => p.id);
+        // Generate and persist today's selection directly
+        const { data: allPhotos, error: photosError } = await supabase
+          .from('photos')
+          .select('id')
+          .eq('status', 'approved');
+
+        if (photosError) throw new Error(photosError.message);
+        if (!allPhotos || allPhotos.length < count) return [];
+
+        const ids = allPhotos.map((p: { id: string }) => p.id);
+        // Fisher–Yates
+        for (let i = ids.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [ids[i], ids[j]] = [ids[j], ids[i]];
         }
+        photoIds = ids.slice(0, count);
+
+        await supabase
+          .from('daily_photo_cache')
+          .insert({ date: today, photo_ids: photoIds });
+        const sevenDaysAgo = new Date(nyDate.getTime() - 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0];
+        await supabase
+          .from('daily_photo_cache')
+          .delete()
+          .lt('date', sevenDaysAgo);
       }
 
       if (photoIds.length === 0) {

@@ -51,7 +51,7 @@ export default function ResultsPopUp({
 
       const map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: 'mapbox://styles/mapbox/streets-v11',
+        style: 'mapbox://styles/mapbox/streets-v12',
         center: [-80.5204, 43.4643],
         zoom: 2,
         interactive: false

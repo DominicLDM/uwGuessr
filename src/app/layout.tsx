@@ -37,6 +37,9 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-title" content="uwGuessr" />
         <meta name="google-site-verification" content="9g46bBFGkoRXeX4Yh8OWRM97pDlOGG7AiOMpZgE8mL0" />
+        {/* Preload */}
+        <link rel="preload" as="image" href="/G.svg" type="image/svg+xml" />
+        <link rel="preload" as="image" href="/underline.png" />
         
         {/* Open Graph */}
         <meta property="og:title" content="uwGuessr" />

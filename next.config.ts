@@ -9,10 +9,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@apollo/client'],
     // Enable faster refresh
     turbo: {
-      resolveAlias: {
-        // Reduce bundle size by aliasing heavy libraries only when needed
-        canvas: './src/lib/canvas-fallback.js',
-      }
+      // keep defaults; remove broken alias
     }
   },
   images: {

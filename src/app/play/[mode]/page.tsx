@@ -19,11 +19,6 @@ query GetRandomPhotos($count: Int!) {
         url
         lat
         lng
-        building
-        floor
-        added_by
-        created_at
-        status
         }
 }
 `;
@@ -35,11 +30,6 @@ query GetDailyPhotos($count: Int!) {
         url
         lat
         lng
-        building
-        floor
-        added_by
-        created_at
-        status
         }
 }
 `;
