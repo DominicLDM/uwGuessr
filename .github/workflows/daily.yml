@@ -2,7 +2,8 @@ name: Daily API Update
 
 on:
   schedule:
-    - cron: '1 4 * * *'  # 12:01 AM EST
+    - cron: '*/5 * * * *'  # 12:01 AM EST
+  workflow_dispatch:
 
 jobs:
   post-to-api:
