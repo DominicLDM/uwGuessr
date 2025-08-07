@@ -44,6 +44,8 @@ export default function RootLayout({
 
         {/* Apple Touch Icon */}
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
+        {/* Safari Tab Favicon */}
+        <link rel="icon" type="image/png" sizes="180x180" href="/apple-icon.png" />
 
         {/* Favicon (ICO, PNG, SVG) */}
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
