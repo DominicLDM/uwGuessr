@@ -2,7 +2,7 @@ name: Daily API Update
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # 12:01 AM EST
+    - cron: '*/5 5 * * *'  # Every 5 minutes past midnight to 1AM
   workflow_dispatch:
 #yo
 jobs:
