@@ -1,0 +1,14 @@
+name: Daily API Update
+
+on:
+  schedule:
+    - cron: '1 4 * * *'  # 12:01 AM EST
+
+jobs:
+  post-to-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call Generate Daily API
+        run: |
+          curl -X POST "https://uwguessr.com/api/generate-daily"
