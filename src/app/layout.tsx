@@ -46,13 +46,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
 
         {/* Favicon (ICO, PNG, SVG) */}
-        <link rel="icon" type="image/png" sizes="32x32" href="/icon1.png" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="icon" type="image/svg+xml" href="/icon0.svg" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/icon1.png" />
-        <link rel="icon" type="image/png" sizes="64x64" href="/icon1.png" />
-        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
-        <link rel="icon" type="image/png" sizes="128x128" href="/icon1.png" />
         <link rel="icon" type="image/png" sizes="256x256" href="/icon1.png" />
 
         {/* Microsoft Tile */}
