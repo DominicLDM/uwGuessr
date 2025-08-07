@@ -36,6 +36,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-title" content="uwGuessr" />
+        <meta name="google-site-verification" content="9g46bBFGkoRXeX4Yh8OWRM97pDlOGG7AiOMpZgE8mL0" />
         
         {/* Open Graph */}
         <meta property="og:title" content="uwGuessr" />
