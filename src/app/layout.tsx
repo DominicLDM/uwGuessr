@@ -18,6 +18,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "uwGuessr",
   description: "A UWaterloo guessing game!",
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({
@@ -29,6 +36,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-title" content="uwGuessr" />
+        
         {/* Open Graph */}
         <meta property="og:title" content="uwGuessr" />
         <meta property="og:description" content="A UWaterloo guessing game!" />
@@ -42,18 +50,9 @@ export default function RootLayout({
         <meta name="twitter:description" content="A UWaterloo guessing game!" />
         <meta name="twitter:image" content="https://uwguessr.com/preview.png" />
 
-        {/* Apple Touch Icon */}
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
-        {/* Safari Tab Favicon */}
-        <link rel="icon" type="image/png" sizes="180x180" href="/apple-icon.png" />
-
-        {/* Favicon (ICO, PNG, SVG) */}
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="icon" type="image/png" sizes="256x256" href="/icon1.png" />
-
         {/* Microsoft Tile */}
         <meta name="msapplication-TileColor" content="#ffc40d" />
-        <meta name="msapplication-TileImage" content="/icon1.png" />
+        <meta name="msapplication-TileImage" content="/apple-touch-icon.png" />
 
         {/* Manifest for PWA */}
         <link rel="manifest" href="/manifest.json" />
