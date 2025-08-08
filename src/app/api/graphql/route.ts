@@ -62,7 +62,11 @@ const resolvers = {
       const nyDate = new Date(
         new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
       );
-      const today = nyDate.toISOString().split('T')[0];
+      // Extract year, month, day from EDT-localized date
+      const year = nyDate.getFullYear();
+      const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+      const day = String(nyDate.getDate()).padStart(2, '0');
+      const today = `${year}-${month}-${day}`;
       
       // Get cached daily photos
       const { data: cached, error: cacheError } = await supabase
