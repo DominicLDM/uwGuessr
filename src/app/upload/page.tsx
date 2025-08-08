@@ -9,6 +9,13 @@ import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft } from 'lucide-reac
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
 export default function UploadPage() {
+    // Debug log function to show logs on the page
+    const debugLog = (msg: string) => {
+        if (typeof window !== 'undefined') {
+            const el = document.getElementById("debug");
+            if (el) el.innerText += msg + "\n";
+        }
+    };
     const router = useRouter();
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isDragActive, setIsDragActive] = useState(false);
@@ -98,13 +105,10 @@ export default function UploadPage() {
 
     // Helper to handle a File directly
     const handleFile = async (file: File) => {
-        console.log(file);
+        debugLog(`Selected file: ${file.name}, type: ${file.type}, size: ${file.size}`);
         if (!file.type.startsWith('image/')) {
+            debugLog('Rejected: Not an image file');
             alert('Please select an image file');
-            return;
-        }
-        if (file.type == 'image/heic' || file.type == 'image/heif') {
-            alert('Please select a JPEG or PNG file');
             return;
         }
         setSelectedFile(file);
@@ -113,16 +117,18 @@ export default function UploadPage() {
         const options = {
             maxSizeMB: 0.5,
             maxWidthOrHeight: 2400,
-            useWebWorker: true,
+            useWebWorker: false,
             fileType: 'image/webp',
         };
+        debugLog(`Compression options: ${JSON.stringify(options)}`);
 
         // Compress the image
         try {
             const compressed = await imageCompression(file, options);
             setCompressedImage(compressed);
+            debugLog(`Compressed size: ${compressed.size}`);
         } catch (error) {
-            console.error('Error compressing image:', error);
+            debugLog('Error compressing image: ' + error);
             alert('Error processing image');
         }
         setShowMap(true);
@@ -202,6 +208,7 @@ export default function UploadPage() {
 
     return (
         <div className="min-h-screen" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)" }}>
+            <pre id="debug" style={{ background: "#eee", padding: "1rem", whiteSpace: "pre-wrap", fontSize: "0.9rem", margin: "0 0 1rem 0" }} />
             {successMessage && (
                 <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-lg animate-in fade-in">
                     {successMessage}
