@@ -4,7 +4,9 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import imageCompression from 'browser-image-compression';
-// Dynamic import for heic2any to avoid SSR issues
+// Use heic-to for HEIC/HEIF detection and conversion
+import { isHeic, heicTo } from 'heic-to';
+
 import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft } from 'lucide-react';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
@@ -24,55 +26,28 @@ export default function UploadPage() {
     const [showMap, setShowMap] = useState(false);
     const [mapLoaded, setMapLoaded] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isHeicFile, setIsHeicFile] = useState(false);
 
-    // Helper function to detect HEIC/HEIF files
-    const isHEIC = (file: File) => {
-        const name = file.name.toLowerCase();
-        const type = file.type.toLowerCase();
-        // Some mobile browsers report 'application/octet-stream' or 'image/*' for HEIC
-        if (
-            name.endsWith('.heic') ||
-            name.endsWith('.heif') ||
-            type === 'image/heic' ||
-            type === 'image/heif' ||
-            (type === 'application/octet-stream' && (name.endsWith('.heic') || name.endsWith('.heif'))) ||
-            (type === 'image/*' && (name.endsWith('.heic') || name.endsWith('.heif')))
-        ) {
-            return true;
-        }
-        return false;
-    };
 
     // Convert HEIC/HEIF to JPEG, then compress to WebP
     const processImage = async (file: File) => {
         setIsProcessing(true);
         let processedFile = file;
-        
         try {
             // Step 1: Convert HEIC/HEIF to JPEG first if needed
-            if (isHEIC(file)) {
-                const { default: heic2any } = await import('heic2any')
+            if (isHeicFile) {
                 console.log('Converting HEIC/HEIF to JPEG...');
-                
-                const convertedBlobOrArray = await heic2any({
+                const convertedBlob = await heicTo({
                     blob: file,
-                    toType: "image/jpeg",
+                    type: 'image/jpeg',
                     quality: 0.9
                 });
-
-                // heic2any may return a Blob or Blob[]
-                const convertedBlob = Array.isArray(convertedBlobOrArray)
-                    ? convertedBlobOrArray[0]
-                    : convertedBlobOrArray;
-
-                processedFile = new File([convertedBlob], 
-                    file.name.replace(/\.(heic|heif)$/i, '.jpg'), 
-                    { type: "image/jpeg" }
+                processedFile = new File([convertedBlob],
+                    file.name.replace(/\.(heic|heif)$/i, '.jpg'),
+                    { type: 'image/jpeg' }
                 );
-                
                 console.log('HEIC conversion successful');
             }
-            
             // Step 2: Compress to WebP (works for JPEG, PNG, etc.)
             const options = {
                 maxSizeMB: 0.5,
@@ -80,13 +55,10 @@ export default function UploadPage() {
                 useWebWorker: true,
                 fileType: 'image/webp',
             };
-            
             console.log('Compressing to WebP...');
             const compressed = await imageCompression(processedFile, options);
             console.log('WebP compression successful');
-            
             return compressed;
-            
         } catch (error) {
             console.error('Image processing failed:', error);
             throw new Error(`Failed to process image: ${error}`);
@@ -171,30 +143,26 @@ export default function UploadPage() {
     // Helper to handle a File directly
     const handleFile = async (file: File) => {
         console.log('Selected file:', file);
-        
-        if (!file.type.startsWith('image/') && !isHEIC(file)) {
+        const heic = await isHeic(file);
+        setIsHeicFile(heic);
+        if (!file.type.startsWith('image/') && !heic) {
             alert('Please select an image file');
             return;
         }
-
         setSelectedFile(file);
         setImagePreview(URL.createObjectURL(file));
-
         try {
             // Process the image (HEIC conversion + WebP compression)
             const compressed = await processImage(file);
             setCompressedImage(compressed);
-            
             console.log('Original size:', file.size, 'bytes');
             console.log('Processed size:', compressed.size, 'bytes');
             console.log('Size reduction:', Math.round((1 - compressed.size / file.size) * 100) + '%');
-            
         } catch (error) {
             console.error('Error processing image:', error);
             alert('Error processing image: ' + error);
             return;
         }
-        
         setShowMap(true);
     };
 
@@ -358,7 +326,7 @@ export default function UploadPage() {
                                                     <div className="text-center text-white">
                                                         <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                                                         <p className="text-sm">
-                                                            {isHEIC(selectedFile) ? 'Converting HEIC/HEIF...' : 'Processing image...'}
+                                            {isHeicFile ? 'Converting HEIC/HEIF...' : 'Processing image...'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -373,7 +341,7 @@ export default function UploadPage() {
                                                 <ImageIcon className="w-4 h-4" />
                                                 Choose Different Photo
                                             </button>
-                                            {isHEIC(selectedFile) && !isProcessing && compressedImage && (
+                                            {isHeicFile && !isProcessing && compressedImage && (
                                                 <p className="text-green-600 text-sm">
                                                     ✓ HEIC/HEIF converted successfully
                                                 </p>
