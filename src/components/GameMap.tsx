@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
+import { campusBoundaries } from './campusBoundaries';
+
+if (campusBoundaries && campusBoundaries.type !== "FeatureCollection") {
+    (campusBoundaries as any).type = "FeatureCollection";
+}
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
@@ -41,7 +46,7 @@ export default function GameMap({
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/standard',
-      center: [-80.5417, 43.4723], // UW coordinates
+      center: [-80.5460, 43.4703], // UW coordinates
       zoom: 16,
       pitch: 0,
       bearing: -20,
@@ -52,6 +57,36 @@ export default function GameMap({
 
     // Wait for map to load and show it quickly
     map.on('load', () => {
+      // Add the campus boundaries source
+      map.addSource('campus-boundaries', {
+          'type': 'geojson',
+          'data': campusBoundaries as GeoJSON.FeatureCollection
+      });
+
+      // Add the boundary line layer (bold yellow outline)
+      map.addLayer({
+          'id': 'campus-boundary-line',
+          'type': 'line',
+          'source': 'campus-boundaries',
+          'layout': {},
+          'paint': {
+              'line-color': '#EAB308',
+              'line-width': 4,
+              'line-opacity': 0.9
+          }
+      });
+
+      map.addLayer({
+          'id': 'campus-boundary-fill',
+          'type': 'fill',
+          'source': 'campus-boundaries',
+          'layout': {},
+          'paint': {
+              'fill-color': '#EAB308', 
+              'fill-opacity': 0.01
+          }
+      }, 'campus-boundary-line'); // Add below the line layer
+
       setMapLoaded(true)
       // Show map after a short delay to ensure initial render
       setTimeout(() => {

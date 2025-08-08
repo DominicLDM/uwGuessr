@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import imageCompression from 'browser-image-compression';
 import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft } from 'lucide-react';
+import { campusBoundaries } from '../../components/campusBoundaries';
+
+if (campusBoundaries && campusBoundaries.type !== "FeatureCollection") {
+    (campusBoundaries as any).type = "FeatureCollection";
+}
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
@@ -45,6 +50,36 @@ export default function UploadPage() {
 
         // Set mapLoaded to true when map is ready
         map.on('load', () => {
+            // Add the campus boundaries source
+            map.addSource('campus-boundaries', {
+                'type': 'geojson',
+                'data': campusBoundaries as GeoJSON.FeatureCollection
+            });
+
+            // Add the boundary line layer (bold yellow outline)
+            map.addLayer({
+                'id': 'campus-boundary-line',
+                'type': 'line',
+                'source': 'campus-boundaries',
+                'layout': {},
+                'paint': {
+                    'line-color': '#EAB308',
+                    'line-width': 4,
+                    'line-opacity': 0.9
+                }
+            });
+
+            map.addLayer({
+                'id': 'campus-boundary-fill',
+                'type': 'fill',
+                'source': 'campus-boundaries',
+                'layout': {},
+                'paint': {
+                    'fill-color': '#EAB308', 
+                    'fill-opacity': 0.01
+                }
+            }, 'campus-boundary-line'); // Add below the line layer
+
             setMapLoaded(true);
         });
 

@@ -221,20 +221,17 @@ export default function ResultsPage() {
         if (selectedRound === roundIndex) {
             // Deselect if clicking the same round
             setSelectedRound(null);
-            
             // Reset all lines to black
             mapRef.current.setPaintProperty('result-lines', 'line-color', '#000000');
-            
             // Zoom back to fit all points
-            const bounds = new mapboxgl.LngLatBounds()
+            const bounds = new mapboxgl.LngLatBounds();
             results?.forEach((result) => {
-                bounds.extend([result.actualLocation.lng, result.actualLocation.lat])
-                bounds.extend([result.userGuess.lng, result.userGuess.lat])
-            })
-            mapRef.current.fitBounds(bounds, { padding: 50 })
+                bounds.extend([result.actualLocation.lng, result.actualLocation.lat]);
+                bounds.extend([result.userGuess.lng, result.userGuess.lat]);
+            });
+            mapRef.current.fitBounds(bounds, { padding: 50 });
         } else {
             setSelectedRound(roundIndex);
-            
             // Set selected line to red, all others to black
             mapRef.current.setPaintProperty('result-lines', 'line-color', [
                 'case',
@@ -242,38 +239,14 @@ export default function ResultsPage() {
                 '#ff0000', // Selected line is red
                 '#000000'  // All other lines stay black
             ]);
-            
-            // Zoom to the selected round's markers
+            // Zoom to the selected round's markers using bounds
             if (results && results[roundIndex]) {
                 const result = results[roundIndex];
-                
-                // Calculate the center point between the two markers
-                const centerLat = (result.actualLocation.lat + result.userGuess.lat) / 2;
-                const centerLng = (result.actualLocation.lng + result.userGuess.lng) / 2;
-                
-                // Calculate distance between points to determine zoom
-                const latDiff = Math.abs(result.actualLocation.lat - result.userGuess.lat);
-                const lngDiff = Math.abs(result.actualLocation.lng - result.userGuess.lng);
-                const maxDiff = Math.max(latDiff, lngDiff);
-                
-                let zoom;
-                if (maxDiff < 0.001) { // Very close (< ~100m)
-                    zoom = 17;
-                } else if (maxDiff < 0.01) { // Close (< ~500m) 
-                    zoom = 15;
-                } else if (maxDiff < 0.02) { // Medium (< ~2km)
-                    zoom = 13;
-                } else if (maxDiff < 0.1) { // Far (< ~10km)
-                    zoom = 11;
-                } else { // Very far
-                    zoom = 9;
-                }
-                
-                mapRef.current.flyTo({
-                    center: [centerLng, centerLat],
-                    zoom: zoom,
-                    duration: 1000
-                });
+                const bounds = new mapboxgl.LngLatBounds();
+                bounds.extend([result.actualLocation.lng, result.actualLocation.lat]);
+                bounds.extend([result.userGuess.lng, result.userGuess.lat]);
+                const padding = window.innerWidth >= 640 ? 100 : 50;
+                mapRef.current.fitBounds(bounds, { padding, duration: 1000 });
             }
         }
     }
