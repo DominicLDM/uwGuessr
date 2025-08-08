@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import imageCompression from 'browser-image-compression';
-import heic2any from 'heic2any';
+// Dynamic import for heic2any to avoid SSR issues
 import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft } from 'lucide-react';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
@@ -23,6 +23,7 @@ export default function UploadPage() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [showMap, setShowMap] = useState(false);
     const [mapLoaded, setMapLoaded] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Helper function to detect HEIC/HEIF files
     const isHEIC = (file: File) => {
@@ -36,22 +37,28 @@ export default function UploadPage() {
 
     // Convert HEIC/HEIF to JPEG, then compress to WebP
     const processImage = async (file: File) => {
+        setIsProcessing(true);
         let processedFile = file;
         
         try {
             // Step 1: Convert HEIC/HEIF to JPEG first if needed
             if (isHEIC(file)) {
+                const { default: heic2any } = await import('heic2any')
                 console.log('Converting HEIC/HEIF to JPEG...');
                 
-                const convertedBlob = await heic2any({
+                const convertedBlobOrArray = await heic2any({
                     blob: file,
                     toType: "image/jpeg",
                     quality: 0.9
                 });
-                
-                processedFile = new File(
-                    Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob],
-                    file.name.replace(/\.(heic|heif)$/i, '.jpg'),
+
+                // heic2any may return a Blob or Blob[]
+                const convertedBlob = Array.isArray(convertedBlobOrArray)
+                    ? convertedBlobOrArray[0]
+                    : convertedBlobOrArray;
+
+                processedFile = new File([convertedBlob], 
+                    file.name.replace(/\.(heic|heif)$/i, '.jpg'), 
                     { type: "image/jpeg" }
                 );
                 
@@ -75,6 +82,8 @@ export default function UploadPage() {
         } catch (error) {
             console.error('Image processing failed:', error);
             throw new Error(`Failed to process image: ${error}`);
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -230,9 +239,7 @@ export default function UploadPage() {
         if (response.ok) {
             setSuccessMessage('Photo uploaded successfully!');
             setTimeout(() => {
-                if (typeof window !== 'undefined') {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 setSuccessMessage(null);
                 setSelectedFile(null);
                 setCompressedImage(null);
@@ -303,7 +310,7 @@ export default function UploadPage() {
                                 </div>
 
                                 <p className="text-gray-600 mb-4 text-sm sm:text-base">
-                                    Please ensure the image is guessable and relevant!
+                                    Please ensure the image is guessable and relevant! HEIC/HEIF files are now supported.
                                 </p>
                                 
                                 <input
@@ -338,22 +345,38 @@ export default function UploadPage() {
                                                 alt="Selected photo" 
                                                 className="w-full h-full object-contain bg-black/90"
                                             />
+                                            {isProcessing && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                    <div className="text-center text-white">
+                                                        <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                                        <p className="text-sm">
+                                                            {isHEIC(selectedFile) ? 'Converting HEIC/HEIF...' : 'Processing image...'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="text-center space-y-3">
                                             <button
                                                 onClick={() => fileInputRef.current?.click()}
-                                                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors inline-flex items-center gap-2 text-sm sm:text-base"
+                                                disabled={isProcessing}
+                                                className="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors inline-flex items-center gap-2 text-sm sm:text-base"
                                             >
                                                 <ImageIcon className="w-4 h-4" />
                                                 Choose Different Photo
                                             </button>
+                                            {isHEIC(selectedFile) && !isProcessing && compressedImage && (
+                                                <p className="text-green-600 text-sm">
+                                                    ✓ HEIC/HEIF converted successfully
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
                             </div>
 
                             {/* Map Section */}
-                            <div className={`p-4 sm:p-6 lg:p-8 xl:p-10 transition-all duration-500 ${showMap ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                            <div className={`p-4 sm:p-6 lg:p-8 xl:p-10 transition-all duration-500 ${showMap && !isProcessing ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
                                 <div className="flex items-center gap-3 mb-4 sm:mb-6">
                                     <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
                                         <MapPin className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
@@ -361,7 +384,7 @@ export default function UploadPage() {
                                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-black">Mark the Location</h2>
                                 </div>
                                 <p className="text-gray-600 mb-4 text-sm sm:text-base">
-                                    {showMap ? 'Click on the map where this photo was taken' : 'Upload a photo first to enable map selection'}
+                                    {showMap && !isProcessing ? 'Click on the map where this photo was taken' : 'Upload and process a photo first to enable map selection'}
                                 </p>
                                 
                                 <div className="relative">
@@ -399,9 +422,9 @@ export default function UploadPage() {
                             <div className="max-w-md mx-auto lg:max-w-2xl">
                                 <button
                                     onClick={handleUpload}
-                                    disabled={!selectedFile || !compressedImage || !marker || isUploading}
+                                    disabled={!selectedFile || !compressedImage || !marker || isUploading || isProcessing}
                                     className={`w-full py-3 sm:py-4 px-6 sm:px-8 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 ${
-                                        !selectedFile || !compressedImage || !marker || isUploading
+                                        !selectedFile || !compressedImage || !marker || isUploading || isProcessing
                                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                             : 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1'
                                     }`}
@@ -411,6 +434,11 @@ export default function UploadPage() {
                                             <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 sm:border-3 border-white border-t-transparent rounded-full animate-spin"></div>
                                             <span>Uploading your photo...</span>
                                         </div>
+                                    ) : isProcessing ? (
+                                        <div className="flex items-center justify-center gap-3">
+                                            <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 sm:border-3 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Processing image...</span>
+                                        </div>
                                     ) : (
                                         <div className="flex items-center justify-center gap-3">
                                             <Send className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -419,9 +447,9 @@ export default function UploadPage() {
                                     )}
                                 </button>
                                 
-                                {(!selectedFile || !marker) && selectedFile && (
+                                {(!selectedFile || !marker || isProcessing) && selectedFile && (
                                     <p className="text-center text-gray-500 mt-3 text-sm sm:text-base">
-                                        {!marker ? 'Please mark the location on the map to continue' : ''}
+                                        {isProcessing ? 'Processing your image...' : !marker ? 'Please mark the location on the map to continue' : ''}
                                     </p>
                                 )}
                             </div>
