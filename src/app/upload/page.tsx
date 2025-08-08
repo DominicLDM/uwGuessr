@@ -230,7 +230,9 @@ export default function UploadPage() {
         if (response.ok) {
             setSuccessMessage('Photo uploaded successfully!');
             setTimeout(() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (typeof window !== 'undefined') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
                 setSuccessMessage(null);
                 setSelectedFile(null);
                 setCompressedImage(null);
