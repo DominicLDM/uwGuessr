@@ -29,10 +29,18 @@ export default function UploadPage() {
     const isHEIC = (file: File) => {
         const name = file.name.toLowerCase();
         const type = file.type.toLowerCase();
-        return type === 'image/heic' || 
-               type === 'image/heif' || 
-               name.endsWith('.heic') || 
-               name.endsWith('.heif');
+        // Some mobile browsers report 'application/octet-stream' or 'image/*' for HEIC
+        if (
+            name.endsWith('.heic') ||
+            name.endsWith('.heif') ||
+            type === 'image/heic' ||
+            type === 'image/heif' ||
+            (type === 'application/octet-stream' && (name.endsWith('.heic') || name.endsWith('.heif'))) ||
+            (type === 'image/*' && (name.endsWith('.heic') || name.endsWith('.heif')))
+        ) {
+            return true;
+        }
+        return false;
     };
 
     // Convert HEIC/HEIF to JPEG, then compress to WebP
