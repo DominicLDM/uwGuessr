@@ -125,7 +125,7 @@ export default function Component() {
       if (dailyCompleted) {
         // Already completed today's challenge, redirect to results immediately
         sessionStorage.setItem('uwGuessrDailyResults', dailyCompleted);
-        router.push('/results');
+        router.push('/results?mode=daily');
         return;
       }
       
@@ -306,7 +306,7 @@ export default function Component() {
       {/* About Modal */}
       {showAbout && (
         <div
-          className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3 sm:p-4 transition-opacity duration-300 ease-in-out ${
+          className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 transition-opacity duration-300 ease-in-out ${
             isAboutAnimating ? 'opacity-100' : 'opacity-0'
           }`}
           style={{ willChange: 'opacity' }}

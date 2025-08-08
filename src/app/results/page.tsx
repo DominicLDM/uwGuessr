@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApolloClient } from '@apollo/client'
+import { useSearchParams } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
-import { RotateCcw, Home, Camera } from 'lucide-react'
+import { RotateCcw, Home, Camera, Trophy } from 'lucide-react'
+import Leaderboard from '@/components/Leaderboard'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
@@ -29,50 +31,84 @@ export default function ResultsPage() {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const [results, setResults] = useState<RoundResult[] | null>(null);
+    const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
     const [totalScore, setTotalScore] = useState<number>(0);
     const [mapLoaded, setMapLoaded] = useState(false);
     const [selectedRound, setSelectedRound] = useState<number | null>(null);
     const markersRef = useRef<{ [key: number]: { guess: mapboxgl.Marker, actual: mapboxgl.Marker } }>({});
+    // Detect mode
+    const [mode, setMode] = useState<'random' | 'daily' | null>(null);
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        // Check for mode in query params first
+        const modeParam = searchParams.get('mode');
+        if (modeParam === 'daily' || modeParam === 'random') {
+            setMode(modeParam as 'daily' | 'random');
+            console.log('Detected mode from query:', modeParam);
+            return;
+        }
+        // Fallback to previous logic
+        const nyDate = new Date(
+            new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+        );
+        const year = nyDate.getFullYear();
+        const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+        const day = String(nyDate.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
+        const dailyCompleted = localStorage.getItem(`uwGuessrDaily_${today}`);
+
+        let detectedMode: 'random' | 'daily' | null = null;
+        const hasRandomResults = sessionStorage.getItem('uwGuessrResults');
+        const currentGame = sessionStorage.getItem('uwGuessrCurrentGame');
+        if (hasRandomResults) {
+            detectedMode = 'random';
+        } else if (currentGame) {
+            try {
+                const parsed = JSON.parse(currentGame);
+                detectedMode = parsed.mode === 'daily' ? 'daily' : 'random';
+            } catch {
+                detectedMode = null;
+            }
+        } else {
+            const hasDailyResults = sessionStorage.getItem('uwGuessrDailyResults');
+            if (dailyCompleted || hasDailyResults) {
+                detectedMode = 'daily';
+            } else {
+                detectedMode = null;
+            }
+        }
+        setMode(detectedMode);
+        console.log('Detected mode:', detectedMode);
+    }, [searchParams]);
 
     useEffect(() => {
-        // Try both mode-specific keys, preferring daily if both exist
-        let savedResults = sessionStorage.getItem('uwGuessrDailyResults');
-        let wasDaily = true;
-        
-        if (!savedResults) {
+        // Wait for mode to be determined
+        if (!mode) return;
+        let savedResults: string | null = null;
+        if (mode === 'daily') {
+            // Get today's date in America/New_York timezone
+            const nyDate = new Date(
+                new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+            );
+            const year = nyDate.getFullYear();
+            const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+            const day = String(nyDate.getDate()).padStart(2, '0');
+            const today = `${year}-${month}-${day}`;
+            // Try to get daily results from localStorage first
+            savedResults = localStorage.getItem(`uwGuessrDaily_${today}`);
+            if (!savedResults) {
+                // Fallback to sessionStorage uwGuessrDailyResults
+                savedResults = sessionStorage.getItem('uwGuessrDailyResults');
+            }
+        } else if (mode === 'random') {
+            // For random mode, get results from sessionStorage uwGuessrResults
             savedResults = sessionStorage.getItem('uwGuessrResults');
-            wasDaily = false;
         }
-        
         const savedResultsHistory = sessionStorage.getItem('uwGuessrResultsHistory');
-        
         if (savedResults) {
-            // Current results exist
             const parsedResults: RoundResult[] = JSON.parse(savedResults);
             setResults(parsedResults);
             setTotalScore(parsedResults.reduce((sum, result) => sum + result.score, 0));
-            
-            // Check if this was a daily challenge by checking the URL referrer or stored mode
-            const currentGame = sessionStorage.getItem('uwGuessrCurrentGame');
-            const gameDataDaily = currentGame && JSON.parse(currentGame).mode === 'daily';
-            
-            // Also check if we came from daily play page
-            const referrer = document.referrer;
-            const fromDaily = referrer.includes('/play/daily');
-            
-            if (wasDaily || gameDataDaily || fromDaily) {
-                const nyDate = new Date(
-                  new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
-                );
-                const year = nyDate.getFullYear();
-                const month = String(nyDate.getMonth() + 1).padStart(2, '0');
-                const day = String(nyDate.getDate()).padStart(2, '0');
-                const today = `${year}-${month}-${day}`;
-                localStorage.setItem(`uwGuessrDaily_${today}`, savedResults);
-                // Clear progress since they've completed it
-                localStorage.removeItem(`uwGuessrDailyProgress_${today}`);
-                console.log('Saved daily completion for', today);
-            }
         } else if (savedResultsHistory) {
             // Show last completed game results
             const parsedResults: RoundResult[] = JSON.parse(savedResultsHistory);
@@ -83,7 +119,7 @@ export default function ResultsPage() {
             router.push('/');
             return;
         }
-    }, [router])
+    }, [mode, router])
 
     // Initialize map with all round data
     useEffect(() => {
@@ -329,29 +365,43 @@ export default function ResultsPage() {
 
                     {/* Action Buttons */}
                     <div className="space-y-2">
-                        <button 
-                            onClick={handlePlayAgain}
-                            className="w-full px-4 py-3 bg-yellow-400 hover:bg-yellow-500 rounded-2xl font-bold text-black border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                            <RotateCcw size={16} /> Play Again
-                        </button>
-                        
-                        <div className="flex gap-2">
+                        {/* Primary Action: Play Again for random, Leaderboard for daily */}
+                        {mode === 'random' ? (
+                            <button 
+                                onClick={handlePlayAgain}
+                                className="group w-full px-6 py-3 bg-yellow-400 hover:bg-yellow-500 rounded-2xl font-bold text-black border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
+                            >
+                                <RotateCcw size={20} className="text-black group-hover:rotate-180 transition-transform duration-300" /> 
+                                <span className="text-lg">Play Again</span>
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => setShowLeaderboard(true)}
+                                className="group w-full px-6 py-3 bg-yellow-400 hover:bg-yellow-500 rounded-2xl font-bold text-black border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
+                            >
+                                <Trophy size={20} className="text-black group-hover:scale-110 group-hover:rotate-12 transition-transform duration-200" /> 
+                                <span className="text-lg">Leaderboard</span>
+                            </button>
+                        )}
+                        {/* Secondary Actions: Home and Upload */}
+                        <div className="flex gap-3">
                             <button 
                                 onClick={handleMainMenu}
-                                className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded-2xl font-bold text-black border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-1 cursor-pointer"
+                                className="group flex-1 px-4 py-2 bg-white hover:bg-gray-50 rounded-2xl font-bold text-black border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
                             >
-                                <Home size={14} /> Home
+                                <Home size={16} className="text-gray-700 group-hover:text-black group-hover:scale-110 transition-all duration-200" /> 
+                                <span className="text-sm sm:text-base">Home</span>
                             </button>
-                            
-                            <button 
-                                onClick={handleUploadImage}
-                                className="flex-1 px-3 py-2 bg-black hover:bg-gray-900 rounded-2xl font-bold text-white border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                                <Camera size={14} /> Upload
-                            </button>
+                                <button 
+                                    onClick={handleUploadImage}
+                                    className="group flex-1 px-4 py-2 bg-black hover:bg-gray-900 rounded-2xl font-bold text-white border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                    <Camera size={16} className="text-white group-hover:text-white group-hover:scale-110 transition-all duration-200" />
+                                    <span className="text-sm sm:text-base">Upload Photo</span>
+                                </button>
                         </div>
                     </div>
+                <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} totalScore={totalScore} />
                 </div>
             </div>
         </div>

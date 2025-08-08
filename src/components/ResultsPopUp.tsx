@@ -384,7 +384,29 @@ export default function ResultsPopUp({
       
       // Clear the current game state but keep results
       sessionStorage.removeItem('uwGuessrCurrentGame');
-      router.push('/results');
+      if (mode === 'daily') {
+        // Get today's date in America/New_York timezone
+        const nyDate = new Date(
+          new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+        );
+        const year = nyDate.getFullYear();
+        const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+        const day = String(nyDate.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
+        // Try to get daily results from localStorage first
+        let results = localStorage.getItem(`uwGuessrDaily_${today}`);
+        if (!results) {
+          // Fallback to sessionStorage uwGuessrDailyResults
+          results = sessionStorage.getItem('uwGuessrDailyResults');
+        }
+        // Optionally, you could pass results as state or query param if needed
+        router.push('/results?mode=daily');
+      } else {
+        // For random mode, get results from sessionStorage uwGuessrResults
+        const results = sessionStorage.getItem('uwGuessrResults');
+        // Optionally, you could pass results as state or query param if needed
+        router.push('/results?mode=random');
+      }
       return;
     }
 
