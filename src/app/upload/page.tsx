@@ -118,7 +118,7 @@ export default function UploadPage() {
             maxSizeMB: 0.5,
             maxWidthOrHeight: 2400,
             useWebWorker: false,
-            fileType: 'image/webp',
+            fileType: 'image/jpeg',
         };
         debugLog(`Compression options: ${JSON.stringify(options)}`);
 
