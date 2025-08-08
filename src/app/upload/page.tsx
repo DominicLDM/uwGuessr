@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import imageCompression from 'browser-image-compression';
+import heic2any from 'heic2any';
 import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft } from 'lucide-react';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
@@ -22,6 +23,60 @@ export default function UploadPage() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [showMap, setShowMap] = useState(false);
     const [mapLoaded, setMapLoaded] = useState(false);
+
+    // Helper function to detect HEIC/HEIF files
+    const isHEIC = (file: File) => {
+        const name = file.name.toLowerCase();
+        const type = file.type.toLowerCase();
+        return type === 'image/heic' || 
+               type === 'image/heif' || 
+               name.endsWith('.heic') || 
+               name.endsWith('.heif');
+    };
+
+    // Convert HEIC/HEIF to JPEG, then compress to WebP
+    const processImage = async (file: File) => {
+        let processedFile = file;
+        
+        try {
+            // Step 1: Convert HEIC/HEIF to JPEG first if needed
+            if (isHEIC(file)) {
+                console.log('Converting HEIC/HEIF to JPEG...');
+                
+                const convertedBlob = await heic2any({
+                    blob: file,
+                    toType: "image/jpeg",
+                    quality: 0.9
+                });
+                
+                processedFile = new File(
+                    Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob],
+                    file.name.replace(/\.(heic|heif)$/i, '.jpg'),
+                    { type: "image/jpeg" }
+                );
+                
+                console.log('HEIC conversion successful');
+            }
+            
+            // Step 2: Compress to WebP (works for JPEG, PNG, etc.)
+            const options = {
+                maxSizeMB: 0.5,
+                maxWidthOrHeight: 2400,
+                useWebWorker: true,
+                fileType: 'image/webp',
+            };
+            
+            console.log('Compressing to WebP...');
+            const compressed = await imageCompression(processedFile, options);
+            console.log('WebP compression successful');
+            
+            return compressed;
+            
+        } catch (error) {
+            console.error('Image processing failed:', error);
+            throw new Error(`Failed to process image: ${error}`);
+        }
+    };
 
     // Memoized map initialization
     const initializeMap = useCallback(() => {
@@ -98,33 +153,31 @@ export default function UploadPage() {
 
     // Helper to handle a File directly
     const handleFile = async (file: File) => {
-        console.log(file);
-        if (!file.type.startsWith('image/')) {
+        console.log('Selected file:', file);
+        
+        if (!file.type.startsWith('image/') && !isHEIC(file)) {
             alert('Please select an image file');
             return;
         }
-        if (file.type == 'image/heic' || file.type == 'image/heif') {
-            alert('Please select a JPEG or PNG file');
-            return;
-        }
+
         setSelectedFile(file);
         setImagePreview(URL.createObjectURL(file));
 
-        const options = {
-            maxSizeMB: 0.5,
-            maxWidthOrHeight: 2400,
-            useWebWorker: true,
-            fileType: 'image/webp',
-        };
-
-        // Compress the image
         try {
-            const compressed = await imageCompression(file, options);
+            // Process the image (HEIC conversion + WebP compression)
+            const compressed = await processImage(file);
             setCompressedImage(compressed);
+            
+            console.log('Original size:', file.size, 'bytes');
+            console.log('Processed size:', compressed.size, 'bytes');
+            console.log('Size reduction:', Math.round((1 - compressed.size / file.size) * 100) + '%');
+            
         } catch (error) {
-            console.error('Error compressing image:', error);
-            alert('Error processing image');
+            console.error('Error processing image:', error);
+            alert('Error processing image: ' + error);
+            return;
         }
+        
         setShowMap(true);
     };
 
@@ -273,7 +326,7 @@ export default function UploadPage() {
                                         </div>
                                         <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-800 mb-2">Drop your photo here</h3>
                                         <p className="text-gray-600 mb-3 sm:mb-4 text-sm sm:text-base">or click to browse files</p>
-                                        <p className="text-xs sm:text-sm text-gray-500">JPEG, PNG, WEBP up to 10MB</p>
+                                        <p className="text-xs sm:text-sm text-gray-500">JPEG, PNG, WEBP, HEIC, HEIF up to 10MB</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
