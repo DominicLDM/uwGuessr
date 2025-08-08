@@ -7,8 +7,10 @@ import imageCompression from 'browser-image-compression';
 import { Upload, MapPin, Image as ImageIcon, Send, ArrowLeft } from 'lucide-react';
 import { campusBoundaries } from '../../components/campusBoundaries';
 
+import type { FeatureCollection } from 'geojson';
+
 if (campusBoundaries && campusBoundaries.type !== "FeatureCollection") {
-    (campusBoundaries as any).type = "FeatureCollection";
+    (campusBoundaries as FeatureCollection).type = "FeatureCollection";
 }
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;

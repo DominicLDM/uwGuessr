@@ -6,8 +6,10 @@ import mapboxgl from 'mapbox-gl'
 import { ChevronUp, X } from 'lucide-react'
 import { campusBoundaries } from './campusBoundaries';
 
+import type { FeatureCollection } from 'geojson';
+
 if (campusBoundaries && campusBoundaries.type !== "FeatureCollection") {
-    (campusBoundaries as any).type = "FeatureCollection";
+    (campusBoundaries as FeatureCollection).type = "FeatureCollection";
 }
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
