@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApolloClient } from '@apollo/client'
 import { useSearchParams } from 'next/navigation';
@@ -25,7 +25,7 @@ interface RoundResult {
     timeSpent: number;
 }
 
-export default function ResultsPage() {
+function ResultsPageContent() {
     const router = useRouter();
     const apolloClient = useApolloClient();
     const mapContainer = useRef<HTMLDivElement>(null);
@@ -39,6 +39,7 @@ export default function ResultsPage() {
     // Detect mode
     const [mode, setMode] = useState<'random' | 'daily' | null>(null);
     const searchParams = useSearchParams();
+
     useEffect(() => {
         // Check for mode in query params first
         const modeParam = searchParams.get('mode');
@@ -405,5 +406,21 @@ export default function ResultsPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+// Loading fallback component
+function ResultsPageFallback() {
+    return (
+        <div className="h-screen w-screen flex items-center justify-center" style={{ backgroundColor: "hsla(46, 86%, 99.5%, 1.00)", height: "100svh" }}>
+        </div>
+    );
+}
+
+export default function ResultsPage() {
+    return (
+        <Suspense fallback={<ResultsPageFallback />}>
+            <ResultsPageContent />
+        </Suspense>
     )
 }
