@@ -367,7 +367,13 @@ export default function ResultsPopUp({
         const key = mode === 'daily' ? 'uwGuessrDailyResults' : 'uwGuessrResults';
         const savedResults = sessionStorage.getItem(key);
         if (savedResults && gameData.mode === 'daily') {
-          const today = new Date().toISOString().split('T')[0];
+          const nyDate = new Date(
+            new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+          );
+          const year = nyDate.getFullYear();
+          const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+          const day = String(nyDate.getDate()).padStart(2, '0');
+          const today = `${year}-${month}-${day}`;
           // Save final completion
           localStorage.setItem(`uwGuessrDaily_${today}`, savedResults);
           // Clear progress since they've completed it

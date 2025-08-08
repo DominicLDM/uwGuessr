@@ -59,7 +59,13 @@ export default function PlayPage() {
         
         // For daily challenges, also save progress to localStorage to prevent cheating
         if (mode === 'daily') {
-            const today = new Date().toISOString().split('T')[0];
+            const nyDate = new Date(
+              new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+            );
+            const year = nyDate.getFullYear();
+            const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+            const day = String(nyDate.getDate()).padStart(2, '0');
+            const today = `${year}-${month}-${day}`;
             localStorage.setItem(`uwGuessrDailyProgress_${today}`, JSON.stringify(gameData));
         }
     };

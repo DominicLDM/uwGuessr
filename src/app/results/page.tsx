@@ -61,7 +61,13 @@ export default function ResultsPage() {
             const fromDaily = referrer.includes('/play/daily');
             
             if (wasDaily || gameDataDaily || fromDaily) {
-                const today = new Date().toISOString().split('T')[0];
+                const nyDate = new Date(
+                  new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+                );
+                const year = nyDate.getFullYear();
+                const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+                const day = String(nyDate.getDate()).padStart(2, '0');
+                const today = `${year}-${month}-${day}`;
                 localStorage.setItem(`uwGuessrDaily_${today}`, savedResults);
                 // Clear progress since they've completed it
                 localStorage.removeItem(`uwGuessrDailyProgress_${today}`);

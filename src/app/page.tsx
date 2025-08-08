@@ -56,8 +56,10 @@ export default function Component() {
   useEffect(() => {
     // Clean up old daily data (older than 7 days)
     const cleanupOldDailyData = () => {
-      const today = new Date();
-      const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const nyDate = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+      );
+      const oneWeekAgo = new Date(nyDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -65,8 +67,17 @@ export default function Component() {
           // Extract date from key (format: uwGuessrDaily_2025-01-15 or uwGuessrDailyProgress_2025-01-15)
           const dateStr = key.split('_')[1];
           if (dateStr) {
-            const keyDate = new Date(dateStr);
-            if (keyDate < oneWeekAgo) {
+          const keyDate = new Date(dateStr);
+          // Compare only yyyy-mm-dd strings for EDT consistency
+          const keyYear = keyDate.getFullYear();
+          const keyMonth = String(keyDate.getMonth() + 1).padStart(2, '0');
+          const keyDay = String(keyDate.getDate()).padStart(2, '0');
+          const keyDateStr = `${keyYear}-${keyMonth}-${keyDay}`;
+          const oneWeekAgoYear = oneWeekAgo.getFullYear();
+          const oneWeekAgoMonth = String(oneWeekAgo.getMonth() + 1).padStart(2, '0');
+          const oneWeekAgoDay = String(oneWeekAgo.getDate()).padStart(2, '0');
+          const oneWeekAgoStr = `${oneWeekAgoYear}-${oneWeekAgoMonth}-${oneWeekAgoDay}`;
+          if (keyDateStr < oneWeekAgoStr) {
               localStorage.removeItem(key);
             }
           }
@@ -101,7 +112,13 @@ export default function Component() {
     
     // Check for daily challenge completion before navigation
     if (path === '/play/daily') {
-      const today = new Date().toISOString().split('T')[0];
+      const nyDate = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+      );
+      const year = nyDate.getFullYear();
+      const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+      const day = String(nyDate.getDate()).padStart(2, '0');
+      const today = `${year}-${month}-${day}`;
       
       // Check if they've already completed today's challenge
       const dailyCompleted = localStorage.getItem(`uwGuessrDaily_${today}`);
