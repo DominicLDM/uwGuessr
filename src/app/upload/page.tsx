@@ -127,6 +127,7 @@ export default function UploadPage() {
             const compressed = await imageCompression(file, options);
             setCompressedImage(compressed);
             debugLog(`Compressed size: ${compressed.size}`);
+            debugLog(`Compressed type: ${compressed.type}`);
         } catch (error) {
             debugLog('Error compressing image: ' + error);
             alert('Error processing image');
