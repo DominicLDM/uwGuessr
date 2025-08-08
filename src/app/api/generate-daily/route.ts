@@ -8,7 +8,15 @@ const supabase = createClient(
 
 export async function POST() {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Always use America/New_York (EDT/EST) for daily photo cache
+    const nyDate = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+    );
+    // Extract year, month, day from EDT-localized date
+    const year = nyDate.getFullYear();
+    const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+    const day = String(nyDate.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
     
     // Check if today's photos are already generated
     const { data: existing, error: checkError } = await supabase
@@ -74,9 +82,11 @@ export async function POST() {
     }
 
     // Optional: Clean up old cache entries (keep last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const cleanupDate = sevenDaysAgo.toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(nyDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const cleanupYear = sevenDaysAgo.getFullYear();
+    const cleanupMonth = String(sevenDaysAgo.getMonth() + 1).padStart(2, '0');
+    const cleanupDay = String(sevenDaysAgo.getDate()).padStart(2, '0');
+    const cleanupDate = `${cleanupYear}-${cleanupMonth}-${cleanupDay}`;
     
     await supabase
       .from('daily_photo_cache')
