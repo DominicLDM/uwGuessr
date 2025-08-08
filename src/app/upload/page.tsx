@@ -98,8 +98,13 @@ export default function UploadPage() {
 
     // Helper to handle a File directly
     const handleFile = async (file: File) => {
+        console.log(file);
         if (!file.type.startsWith('image/')) {
             alert('Please select an image file');
+            return;
+        }
+        if (file.type == 'image/heic' || file.type == 'image/heif') {
+            alert('Please select a JPEG or PNG file');
             return;
         }
         setSelectedFile(file);
