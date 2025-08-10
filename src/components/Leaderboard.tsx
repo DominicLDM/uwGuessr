@@ -95,12 +95,6 @@ export default function LeaderboardModal({
 
     const scores: ScoreData[] = [...data.allScores];
     
-    // Sort by score descending, then by time ascending (faster time breaks ties)
-    scores.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.timetaken - b.timetaken;
-    });
-
     // Get top 5
     const top5 = scores.slice(0, 5);
 
@@ -121,17 +115,8 @@ export default function LeaderboardModal({
     switch (rank) {
       case 1: return "text-yellow-600"; // Gold
       case 2: return "text-gray-600";   // Silver
-      case 3: return "text-[#cd7f32]"; // Bronze (deeper copper tone)
+      case 3: return "text-[#cd7f32]"; // Bronze 
       default: return "text-black";
-    }
-  };
-
-  const getRankStyle = (rank: number): string => {
-    switch (rank) {
-      case 1: return "bg-yellow-100 border-yellow-300";
-      case 2: return "bg-gray-50 border-gray-200";
-      case 3: return "bg-orange-50 border-orange-200";
-      default: return "border-gray-100";
     }
   };
 
@@ -180,41 +165,27 @@ export default function LeaderboardModal({
             <div className="space-y-0.5 sm:space-y-0.5 md:space-y-1">
               {loading ? (
                 <>
-                  {/* Loading */}
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className={`grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-2 sm:py-2 md:py-3 items-center rounded-xl px-3 sm:px-3 md:px-4 border-2 ${getRankStyle(i)}`}>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-4 bg-gray-200 rounded animate-pulse"></div>
-                        <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div key={i} className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 items-center px-3 sm:px-3 md:px-4">
+                      <div className={`font-bold text-sm sm:text-base md:text-lg ${getRankTextColor(i)}`}>
+                        {i}. <span className="inline-block align-middle h-4 w-24 bg-gray-200 rounded blur-[1px]" />
                       </div>
-                      <div className="text-center">
-                        <div className="w-8 h-4 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                      <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                        <span className="inline-block h-4 w-10 bg-gray-200 rounded blur-[1px]" />
                       </div>
-                      <div className="text-right">
-                        <div className="w-8 h-4 bg-gray-200 rounded animate-pulse ml-auto"></div>
+                      <div className="text-right justify-self-end font-bold text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                        <span className="inline-block h-4 w-16 bg-gray-200 rounded blur-[1px]" />
                       </div>
                     </div>
                   ))}
-                  {/* Loading user row */}
-                  <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-1 sm:py-1 md:py-2 items-center px-3 sm:px-3 md:px-4">
-                    <div className="text-black text-sm sm:text-base md:text-lg">
-                      <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
-                    </div>
-                    <div className="text-center text-xs sm:text-sm md:text-base">
-                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse mx-auto"></div>
-                    </div>
-                    <div className="text-right text-xs sm:text-sm md:text-base">
-                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse ml-auto"></div>
-                    </div>
-                  </div>
-                  {/* Loading average row */}
-                  <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-1 sm:py-1 md:py-2 lg:py-3 items-center border-t-2 border-black mt-2 sm:mt-2 md:mt-3 pt-2 sm:pt-2 md:pt-3 px-3 sm:px-3 md:px-4">
+                  <div className="border-t-2 border-black my-2" />
+                  <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 items-center px-3 sm:px-3 md:px-4">
                     <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
-                    <div className="text-center">
-                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-medium font-sans tabular-nums">
+                      <span className="inline-block h-4 w-10 bg-gray-200 rounded blur-[1px]" />
                     </div>
-                    <div className="text-right">
-                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse ml-auto"></div>
+                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-bold font-sans tabular-nums">
+                      <span className="inline-block h-4 w-16 bg-gray-200 rounded blur-[1px]" />
                     </div>
                   </div>
                 </>
