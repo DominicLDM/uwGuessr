@@ -131,7 +131,6 @@ export default function ResultsPopUp({
       setShowBottomBar(false);
       isAnimatingRef.current = false;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResults, userGuess, actualLocation, distance, score, isMapReady]);
 
   const animateToResults = () => {
@@ -386,7 +385,7 @@ export default function ResultsPopUp({
       // Clear the current game state but keep results
       sessionStorage.removeItem('uwGuessrCurrentGame');
       if (mode === 'daily') {
-        router.push('/results?mode=daily');
+        router.push('/results?mode=daily&fromGame=1');
       } else {
         router.push('/results?mode=random');
       }

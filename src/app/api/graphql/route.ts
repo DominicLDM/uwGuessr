@@ -20,16 +20,42 @@ const typeDefs = `
     created_at: String
     status: String
   }
+  type Score {
+    uid: String
+    day: String
+    name: String
+    score: Int
+    timetaken: Int
+  }
+  type DailyScore {
+    id: ID
+    date: String
+    name: String
+    score: Int
+    time_taken: Int
+    created_at: String
+  }
   type Query {
     photos(status: String): [Photo]
     randomPhotos(count: Int!): [Photo]
     dailyPhotos(count: Int!): [Photo]
+    allScores(day: String!): [Score]
   }
   type Mutation {
     approvePhoto(id: ID!, lat: Float!, lng: Float!): Photo
     rejectPhoto(id: ID!): Photo
+    addDailyScore(date: String!, name: String!, score: Int!, time_taken: Int!): DailyScore
   }
 `;
+
+type DailyScoreRow = {
+  id: string | null;
+  date: string;
+  name: string;
+  score: number;
+  time_taken: number;
+  created_at?: string | null;
+};
 
 const resolvers = {
   Query: {
@@ -134,6 +160,25 @@ const resolvers = {
       
       return orderedPhotos.slice(0, count);
     },
+    allScores: async (_: unknown, { day }: { day: string }) => {
+      // Get all scores for the given day
+      const { data, error } = await supabase
+        .from('daily_scores')
+        .select('id, date, name, score, time_taken')
+        .eq('date', day)
+        .order('score', { ascending: false })
+        .order('time_taken', { ascending: true });
+      if (error) throw new Error(error.message);
+      const rows = ((data as unknown) as DailyScoreRow[]) ?? [];
+      const mapped = rows.map((row) => ({
+        uid: row.id ?? null,
+        day: row.date,
+        name: row.name,
+        score: row.score,
+        timetaken: row.time_taken,
+      }));
+      return mapped;
+    },
   },
   Mutation: {
     approvePhoto: async (_: unknown, { id, lat, lng }: { id: string, lat: number, lng: number }) => {
@@ -155,6 +200,27 @@ const resolvers = {
         .single();
       if (error) throw new Error(error.message);
       return data;
+    },
+    addDailyScore: async (
+      _: unknown,
+      { date, name, score, time_taken }: { date: string; name: string; score: number; time_taken: number }
+    ) => {
+      const { data, error } = await supabase
+        .from('daily_scores')
+        .insert({ date, name, score, time_taken })
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      const row = (data as unknown) as DailyScoreRow;
+      return {
+        id: row?.id ?? null,
+        date: row?.date ?? date,
+        name: row?.name ?? name,
+        score: row?.score ?? score,
+        time_taken: row?.time_taken ?? time_taken,
+        created_at: row?.created_at ?? null,
+      };
     },
   },
 };

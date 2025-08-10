@@ -240,22 +240,22 @@ export default function Component() {
         <div className="flex flex-col sm:flex-row gap-4 mb-8 relative z-10">
           <Button
             size="lg"
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => handleNavigation("/play/random")}
             disabled={isNavigating}
           >
-            <Play className="mr-2 h-5 w-5" />
+            <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             Start Playing
           </Button>
 
           <Button
             variant="outline"
             size="lg"
-            className="font-semibold px-8 py-3 text-lg rounded-xl border-2 border-black text-yellow-500 hover:bg-black hover:shadow-xl hover:text-yellow-500 transition-all duration-300 hover:scale-105 bg-black cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group font-semibold px-8 py-3 text-lg rounded-xl border-2 border-black text-yellow-500 hover:bg-black hover:shadow-xl hover:text-yellow-500 transition-all duration-300 hover:scale-105 bg-black cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => handleNavigation("/play/daily")}
             disabled={isNavigating}
           >
-            <Calendar className="mr-2 h-5 w-5" />
+            <Calendar className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             Daily Challenge
           </Button>
         </div>
@@ -281,7 +281,7 @@ export default function Component() {
       {/* Footer */}
       <footer className="py-6 px-6 text-center relative z-10">
         <div className="flex justify-center gap-8 mb-4 text-sm">
-          <button onClick={handleShowAbout} className="text-slate-900 hover:text-yellow-500 transition-colors">
+          <button onClick={handleShowAbout} className="text-slate-900 hover:text-yellow-500 transition-colors cursor-pointer">
             About
           </button>
           <Link href="https://www.instagram.com/dom_ldm/" className="text-slate-900 hover:text-yellow-500 transition-colors">

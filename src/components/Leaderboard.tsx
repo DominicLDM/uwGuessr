@@ -1,13 +1,140 @@
 import React from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, } from "lucide-react";
+import { useQuery, gql } from '@apollo/client';
+
+const ALL_SCORES_QUERY = gql`
+  query AllScores($day: String!) {
+    allScores(day: $day) {
+      uid
+      name
+      score
+      timetaken
+    }
+  }
+`;
 
 interface LeaderboardModalProps {
   show: boolean;
   onClose: () => void;
-  totalScore: number;
 }
 
-export default function LeaderboardModal({ show, onClose, totalScore }: LeaderboardModalProps) {
+interface ScoreData {
+  uid: string;
+  name: string;
+  score: number;
+  timetaken: number;
+}
+
+export default function LeaderboardModal({ 
+  show, 
+  onClose,
+}: LeaderboardModalProps) {
+
+  // Get EDT-localized date
+  const nyDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const year = nyDate.getFullYear();
+  const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+  const day = String(nyDate.getDate()).padStart(2, '0');
+  const today = `${year}-${month}-${day}`;
+
+  // Calculate daily challenge number based on EDT
+  const startDate = new Date(Date.UTC(2025, 7, 10)); // August is 7 (0-indexed)
+  // Get EDT date as UTC midnight
+  const edtDate = new Date(Date.UTC(year, nyDate.getMonth(), nyDate.getDate()));
+  const diffTime = edtDate.getTime() - startDate.getTime();
+  const dailyNumber = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1);
+
+  const { data, loading, error, refetch } = useQuery(ALL_SCORES_QUERY, {
+    variables: { day: today },
+    notifyOnNetworkStatusChange: true,
+    fetchPolicy: 'network-only',
+    nextFetchPolicy: 'cache-first'
+  });
+
+  // Refetch
+  React.useEffect(() => {
+    if (show) {
+      refetch({ day: today }).catch(() => {});
+    }
+  }, [show, refetch, today]);
+
+  // Countdown to next midnight in EDT and refresh on rollover
+  const [countdown, setCountdown] = React.useState<string>("");
+  React.useEffect(() => {
+    if (!show) return;
+    const interval = setInterval(() => {
+      const nowNY = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      const nextNY = new Date(nowNY);
+      nextNY.setDate(nowNY.getDate() + 1);
+      nextNY.setHours(0, 0, 0, 0);
+      const diffMs = nextNY.getTime() - nowNY.getTime();
+      if (diffMs <= 0) {
+        // Day changed in EDT; refetch for new day
+        const nyDateFresh = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const y = nyDateFresh.getFullYear();
+        const m = String(nyDateFresh.getMonth() + 1).padStart(2, '0');
+        const d = String(nyDateFresh.getDate()).padStart(2, '0');
+        refetch({ day: `${y}-${m}-${d}` }).catch(() => {});
+      }
+      const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
+      const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+      const ss = String(totalSeconds % 60).padStart(2, '0');
+      setCountdown(`${hh}:${mm}:${ss}`);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [show, refetch]);
+
+  const formatTime = (seconds: number): string => {
+    return `${seconds}s`;
+  };
+
+  // Process the data
+  const processedData = React.useMemo(() => {
+    if (!data?.allScores) return null;
+
+    const scores: ScoreData[] = [...data.allScores];
+    
+    // Sort by score descending, then by time ascending (faster time breaks ties)
+    scores.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.timetaken - b.timetaken;
+    });
+
+    // Get top 5
+    const top5 = scores.slice(0, 5);
+
+    // Calculate average score and time
+    const totalPlayers = scores.length;
+    const avgScore = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / totalPlayers) : 0;
+    const avgTime = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.timetaken, 0) / totalPlayers) : 0;
+
+    return {
+      top5,
+      totalPlayers,
+      avgScore,
+      avgTime
+    };
+  }, [data]);
+
+  const getRankTextColor = (rank: number): string => {
+    switch (rank) {
+      case 1: return "text-yellow-600"; // Gold
+      case 2: return "text-gray-600";   // Silver
+      case 3: return "text-[#cd7f32]"; // Bronze (deeper copper tone)
+      default: return "text-black";
+    }
+  };
+
+  const getRankStyle = (rank: number): string => {
+    switch (rank) {
+      case 1: return "bg-yellow-100 border-yellow-300";
+      case 2: return "bg-gray-50 border-gray-200";
+      case 3: return "bg-orange-50 border-orange-200";
+      default: return "border-gray-100";
+    }
+  };
+
   if (!show) return null;
 
   return (
@@ -23,7 +150,7 @@ export default function LeaderboardModal({ show, onClose, totalScore }: Leaderbo
       >
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 w-6 h-6 cursor-pointer rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-lg text-black font-bold"
+          className="absolute top-2 right-2 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 cursor-pointer rounded-full hover:text-yellow-500 flex items-center justify-center transition-colors text-sm sm:text-base md:text-lg"
           aria-label="Close leaderboard"
         >
           ✕
@@ -32,68 +159,119 @@ export default function LeaderboardModal({ show, onClose, totalScore }: Leaderbo
         <div className="flex flex-col items-center">
           {/* Header */}
           <div className="text-center mb-4 sm:mb-4 md:mb-5">
-            <Trophy size={24} className="text-yellow-600 mx-auto mb-2 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />
-            <h2 className="text-xl sm:text-xl md:text-2xl lg:text-3xl font-bold text-black mb-1">Daily Challenge #428</h2>
+            <Trophy size={24} className="text-yellow-500 mx-auto mb-2 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />
+            <h2 className="text-xl sm:text-xl md:text-2xl lg:text-3xl font-bold text-black mb-1">Daily Challenge #{dailyNumber}</h2>
           </div>
+
+          {/* Error State */}
+          {error && (
+            <div className="text-center text-red-600 mb-4">
+              Failed to load leaderboard data. Please try again.
+            </div>
+          )}
 
           {/* Leaderboard Table */}
           <div className="w-full mb-4 sm:mb-4 md:mb-5">
-            <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 mb-2 sm:mb-2 md:mb-3 text-sm sm:text-sm md:text-base font-bold text-gray-600 border-b-2 border-gray-200 pb-2">
+            <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 mb-2 sm:mb-2 md:mb-3 text-sm sm:text-sm md:text-base font-bold text-gray-600 border-b-2 border-gray-200 pb-2 px-3 sm:px-3 md:px-4">
               <div>Player</div>
-              <div className="text-center">Time</div>
+              <div className="text-right">Time</div>
               <div className="text-right">Score</div>
             </div>
-            <div className="space-y-1 sm:space-y-1 md:space-y-1">
-              <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-2 sm:py-2 md:py-3 items-center bg-yellow-100 rounded-xl px-3 sm:px-3 md:px-4 border-2 border-yellow-300">
-                <div className="font-bold text-black text-sm sm:text-base md:text-lg">🥇 Alice</div>
-                <div className="text-center text-xs sm:text-sm md:text-base">2:07</div>
-                <div className="text-right font-bold text-xs sm:text-sm md:text-base">25k</div>
-              </div>
-              <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-2 sm:py-2 md:py-3 items-center bg-gray-50 rounded-xl px-3 sm:px-3 md:px-4 border border-gray-200">
-                <div className="font-bold text-black text-sm sm:text-base md:text-lg">🥈 Bob</div>
-                <div className="text-center text-xs sm:text-sm md:text-base">3:12</div>
-                <div className="text-right font-bold text-xs sm:text-sm md:text-base">23k</div>
-              </div>
-              <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-2 sm:py-2 md:py-3 items-center bg-orange-50 rounded-xl px-3 sm:px-3 md:px-4 border border-orange-200">
-                <div className="font-bold text-black text-sm sm:text-base md:text-lg">🥉 Charlie</div>
-                <div className="text-center text-xs sm:text-sm md:text-base">4:18</div>
-                <div className="text-right font-bold text-xs sm:text-sm md:text-base">22k</div>
-              </div>
-              <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-1 sm:py-1 md:py-2 items-center px-3 sm:px-3 md:px-4">
-                <div className="text-black text-sm sm:text-base md:text-lg">4. Dana</div>
-                <div className="text-center text-xs sm:text-sm md:text-base text-gray-600">5:23</div>
-                <div className="text-right text-xs sm:text-sm md:text-base">21k</div>
-              </div>
-              <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-1 sm:py-1 md:py-2 items-center bg-yellow-50 rounded-xl px-3 sm:px-3 md:px-4 border-2 border-yellow-200">
-                <div className="font-bold text-black text-sm sm:text-base md:text-lg">5. You</div>
-                <div className="text-center text-xs sm:text-sm md:text-base">6:28</div>
-                <div className="text-right font-bold text-xs sm:text-sm md:text-base text-yellow-600">{Math.round(totalScore/1000)}k</div>
-              </div>
-              {/* Average row */}
-              <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-1 sm:py-1 md:py-2 lg:py-3 items-center border-t-2 border-black mt-2 sm:mt-2 md:mt-3 pt-2 sm:pt-2 md:pt-3 px-3 sm:px-3 md:px-4">
-                <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
-                <div className="text-center text-xs sm:text-sm md:text-base font-medium">8:07</div>
-                <div className="text-right text-xs sm:text-sm md:text-base font-bold">18k</div>
-              </div>
+            <div className="space-y-0.5 sm:space-y-0.5 md:space-y-1">
+              {loading ? (
+                <>
+                  {/* Loading */}
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className={`grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-2 sm:py-2 md:py-3 items-center rounded-xl px-3 sm:px-3 md:px-4 border-2 ${getRankStyle(i)}`}>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-8 h-4 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                      </div>
+                      <div className="text-right">
+                        <div className="w-8 h-4 bg-gray-200 rounded animate-pulse ml-auto"></div>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Loading user row */}
+                  <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-1 sm:py-1 md:py-2 items-center px-3 sm:px-3 md:px-4">
+                    <div className="text-black text-sm sm:text-base md:text-lg">
+                      <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div className="text-center text-xs sm:text-sm md:text-base">
+                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                    </div>
+                    <div className="text-right text-xs sm:text-sm md:text-base">
+                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse ml-auto"></div>
+                    </div>
+                  </div>
+                  {/* Loading average row */}
+                  <div className="grid grid-cols-3 gap-3 sm:gap-3 md:gap-4 py-1 sm:py-1 md:py-2 lg:py-3 items-center border-t-2 border-black mt-2 sm:mt-2 md:mt-3 pt-2 sm:pt-2 md:pt-3 px-3 sm:px-3 md:px-4">
+                    <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
+                    <div className="text-center">
+                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                    </div>
+                    <div className="text-right">
+                      <div className="w-8 h-4 bg-gray-200 rounded animate-pulse ml-auto"></div>
+                    </div>
+                  </div>
+                </>
+              ) : processedData ? (
+                <>
+                  {/* Top 5 players */}
+                  {processedData.top5.map((player, index) => {
+                    const rank = index + 1;
+                    const textColor = getRankTextColor(rank);
+                    return (
+                      <div key={player.uid} className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 items-center px-3 sm:px-3 md:px-4">
+                        <div className={`font-bold text-sm sm:text-base md:text-lg ${textColor}`}>
+                          {rank}. {player.name}
+                        </div>
+                        <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                          {formatTime(player.timetaken)}
+                        </div>
+                        <div className="text-right justify-self-end font-bold text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                          {player.score.toLocaleString('en-US')}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="border-t-2 border-black my-2" />
+                  {/* Average row */}
+                  <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 items-center px-3 sm:px-3 md:px-4">
+                    <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
+                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-medium font-sans tabular-nums">
+                      {formatTime(processedData.avgTime)}
+                    </div>
+                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-bold font-sans tabular-nums">
+                      {processedData.avgScore.toLocaleString('en-US')}
+                    </div>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="text-center text-xs sm:text-sm md:text-base text-gray-600 mb-3 sm:mb-3 md:mb-4 lg:mb-5">
-            You placed higher than <span className="font-bold text-black">91%</span> of players
+          {/* Leaderboard count */}
+          <div className="text-center text-xs sm:text-sm md:text-base text-gray-600 mb-2">
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <span>Loading leaderboard</span>
+                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+              </div>
+            ) : processedData ? (
+              <span className="text-xs text-gray-500">
+                {processedData.totalPlayers} {processedData.totalPlayers === 1 ? 'person' : 'people'} on the leaderboard today!
+              </span>
+            ) : (
+              <span>Unable to load leaderboard</span>
+            )}
           </div>
-
-          {/* Name Input with Submit */}
-          <div className="w-full flex gap-2">
-            <input
-              type="text"
-              className="flex-1 px-3 sm:px-3 md:px-4 py-2 sm:py-2 md:py-3 rounded-xl bg-gray-50 border-2 border-gray-300 focus:border-yellow-400 focus:outline-none text-black font-medium text-center text-sm sm:text-sm md:text-base"
-              placeholder="Enter your name"
-            />
-            <button className="group px-6 py-3 bg-yellow-400 hover:bg-yellow-500 rounded-2xl font-bold text-black border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer">
-              <span className="text-lg">Submit</span>
-            </button>
-          </div>
+          {/* Countdown to midnight EDT */}
+          <div className="text-center text-[11px] sm:text-xs text-gray-500">New Daily in {countdown}</div>
         </div>
       </div>
     </div>

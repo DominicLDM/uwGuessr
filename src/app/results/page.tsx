@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import { RotateCcw, Home, Camera, Trophy } from 'lucide-react'
 import Leaderboard from '@/components/Leaderboard'
+import NameInput from '@/components/NameInput'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
@@ -31,6 +32,7 @@ function ResultsPageContent() {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const [results, setResults] = useState<RoundResult[] | null>(null);
+    const [showNameInput, setShowNameInput] = useState<boolean>(false);
     const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
     const [totalScore, setTotalScore] = useState<number>(0);
     const [mapLoaded, setMapLoaded] = useState(false);
@@ -86,6 +88,8 @@ function ResultsPageContent() {
         // Wait for mode to be determined
         if (!mode) return;
         let savedResults: string | null = null;
+        let dailySource: 'local' | 'session' | null = null;
+        const fromGame = searchParams.get('fromGame') === '1';
         if (mode === 'daily') {
             // Get today's date in America/New_York timezone
             const nyDate = new Date(
@@ -95,11 +99,25 @@ function ResultsPageContent() {
             const month = String(nyDate.getMonth() + 1).padStart(2, '0');
             const day = String(nyDate.getDate()).padStart(2, '0');
             const today = `${year}-${month}-${day}`;
-            // Try to get daily results from localStorage first
-            savedResults = localStorage.getItem(`uwGuessrDaily_${today}`);
-            if (!savedResults) {
-                // Fallback to sessionStorage uwGuessrDailyResults
-                savedResults = sessionStorage.getItem('uwGuessrDailyResults');
+            const localDaily = localStorage.getItem(`uwGuessrDaily_${today}`);
+            const sessionDaily = sessionStorage.getItem('uwGuessrDailyResults');
+            const submittedFlag = localStorage.getItem(`uwGuessrDailySubmitted_${today}`);
+            if (fromGame && sessionDaily) {
+                savedResults = sessionDaily;
+                dailySource = 'session';
+            } else if (!fromGame && localDaily) {
+                savedResults = localDaily;
+                dailySource = 'local';
+            } else if (sessionDaily) {
+                savedResults = sessionDaily;
+                dailySource = 'session';
+            } else if (localDaily) {
+                savedResults = localDaily;
+                dailySource = 'local';
+            }
+            // Only show name input if daily results came from sessionStorage and fromGame=1
+            if (dailySource === 'session' && fromGame && !submittedFlag) {
+                setShowNameInput(true);
             }
         } else if (mode === 'random') {
             // For random mode, get results from sessionStorage uwGuessrResults
@@ -288,6 +306,29 @@ function ResultsPageContent() {
         }
     }
 
+    const handleNameInputClose = () => {
+        setShowNameInput(false);
+        // Show leaderboard after name input is closed for daily mode, only if dailySource is 'session'
+        if (mode === 'daily') {
+            setShowLeaderboard(true);
+        }
+    }
+
+    const handleNameSubmit = (name: string) => {
+        console.log('Name submitted:', name);
+        
+        // Close name input and show leaderboard
+        setShowNameInput(false);
+        if (mode === 'daily') {
+            setShowLeaderboard(true);
+        }
+    }
+
+    const handleLeaderboardFromButton = () => {
+        // This is for when user clicks the leaderboard button (not from name input flow)
+        setShowLeaderboard(true);
+    }
+
     // Show nothing while loading (no spinner)
     if (!results || results.length === 0) {
         return null;
@@ -377,7 +418,7 @@ function ResultsPageContent() {
                             </button>
                         ) : (
                             <button 
-                                onClick={() => setShowLeaderboard(true)}
+                                onClick={handleLeaderboardFromButton}
                                 className="group w-full px-6 py-3 bg-yellow-400 hover:bg-yellow-500 rounded-2xl font-bold text-black border-4 border-black transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                             >
                                 <Trophy size={20} className="text-black group-hover:scale-110 group-hover:rotate-12 transition-transform duration-200" /> 
@@ -402,7 +443,19 @@ function ResultsPageContent() {
                                 </button>
                         </div>
                     </div>
-                <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} totalScore={totalScore} />
+                {/* Name Input, shows first on daily mode */}
+                <NameInput 
+                    show={showNameInput} 
+                    onClose={handleNameInputClose}
+                    onSubmit={handleNameSubmit}
+                    totalScore={totalScore}
+                    timeTaken={results ? results.reduce((sum, r) => sum + r.timeSpent, 0) : 0}
+                />
+                {/* Leaderboard, shows after name input or when button is clicked */}
+                <Leaderboard 
+                    show={showLeaderboard} 
+                    onClose={() => setShowLeaderboard(false)} 
+                />
                 </div>
             </div>
         </div>
