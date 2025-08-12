@@ -1,7 +1,7 @@
 import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import { createClient } from '@supabase/supabase-js';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -169,7 +169,7 @@ const resolvers = {
         .order('score', { ascending: false })
         .order('time_taken', { ascending: true });
       if (error) throw new Error(error.message);
-      const rows = ((data as unknown) as DailyScoreRow[]) ?? [];
+      const rows = (data as DailyScoreRow[]) ?? [];
       const mapped = rows.map((row) => ({
         uid: row.id ?? null,
         day: row.date,
@@ -181,7 +181,15 @@ const resolvers = {
     },
   },
   Mutation: {
-    approvePhoto: async (_: unknown, { id, lat, lng }: { id: string, lat: number, lng: number }) => {
+    approvePhoto: async (
+      _: unknown,
+      { id, lat, lng }: { id: string; lat: number; lng: number },
+      ctx: { request: NextRequest }
+    ) => {
+      // Check for admin email in request headers
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      const email = ctx.request.headers.get('x-admin-email');
+      if (!email || email !== adminEmail) throw new Error('Unauthorized');
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'approved', lat, lng })
@@ -191,7 +199,15 @@ const resolvers = {
       if (error) throw new Error(error.message);
       return data;
     },
-    rejectPhoto: async (_: unknown, { id }: { id: string }) => {
+    rejectPhoto: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: { request: NextRequest }
+    ) => {
+      // Check for admin email in request headers
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      const email = ctx.request.headers.get('x-admin-email');
+      if (!email || email !== adminEmail) throw new Error('Unauthorized');
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'rejected' })
@@ -205,20 +221,24 @@ const resolvers = {
       _: unknown,
       { date, name, score, time_taken }: { date: string; name: string; score: number; time_taken: number }
     ) => {
+      const safeName = (name || '').toString().slice(0, 50);
+      const clampedScore = Math.max(0, Math.min(score, 100000));
+      const clampedTime = Math.max(0, Math.min(time_taken, 24 * 60 * 60));
+
       const { data, error } = await supabase
         .from('daily_scores')
-        .insert({ date, name, score, time_taken })
+        .insert({ date, name: safeName, score: clampedScore, time_taken: clampedTime })
         .select()
         .single();
 
       if (error) throw new Error(error.message);
-      const row = (data as unknown) as DailyScoreRow;
+      const row = data as DailyScoreRow;
       return {
         id: row?.id ?? null,
         date: row?.date ?? date,
-        name: row?.name ?? name,
-        score: row?.score ?? score,
-        time_taken: row?.time_taken ?? time_taken,
+        name: row?.name ?? safeName,
+        score: row?.score ?? clampedScore,
+        time_taken: row?.time_taken ?? clampedTime,
         created_at: row?.created_at ?? null,
       };
     },
@@ -227,12 +247,18 @@ const resolvers = {
 
 const server = new ApolloServer({ typeDefs, resolvers });
 
-const handler = startServerAndCreateNextHandler(server);
+const handler = startServerAndCreateNextHandler(server, {
+  context: async (request: NextRequest) => ({ request }),
+});
 
-export async function GET(request: NextRequest) {
-  return handler(request);
+export async function GET() {
+  return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
 }
 
 export async function POST(request: NextRequest) {
+  const cl = request.headers.get('content-length');
+  if (cl && Number(cl) > 100_000) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+  }
   return handler(request);
 }

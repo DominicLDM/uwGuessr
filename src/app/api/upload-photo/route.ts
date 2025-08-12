@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { fileTypeFromBuffer } from 'file-type';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -13,42 +14,47 @@ export async function POST(request: NextRequest) {
     const lat = formData.get('lat') ? parseFloat(formData.get('lat') as string) : null;
     const lng = formData.get('lng') ? parseFloat(formData.get('lng') as string) : null;
     const added_by = formData.get('added_by') as string;
-    const status = formData.get('status') as string || 'pending';
+    const status = (formData.get('status') as string) || 'pending';
 
     if (!file) {
       return NextResponse.json({ error: 'File is required' }, { status: 400 });
     }
 
-    // Validate file type - support WebP and other common formats
-    const allowedTypes = ['image/webp', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ 
-        error: `Unsupported file type: ${file.type}. Allowed types: ${allowedTypes.join(', ')}` 
-      }, { status: 400 });
-    }
-
-    // Validate file size (e.g., max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Enforce file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return NextResponse.json({ 
         error: `File too large. Maximum size is ${maxSize / 1024 / 1024}MB` 
       }, { status: 400 });
     }
 
-    // Get file extension
-    const fileExt = file.type.split('/')[1];
-    const fileName = `${Date.now()}.${fileExt}`;
-
-    // Convert file to buffer
+    // Convert file to buffer and verify magic number
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const detected = await fileTypeFromBuffer(buffer);
+    const allowed = ['image/webp', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!detected || !allowed.includes(detected.mime)) {
+      return NextResponse.json({ 
+        error: `Unsupported file type. Allowed types: ${allowed.join(', ')}` 
+      }, { status: 400 });
+    }
+
+    // Basic metadata validation/sanitization
+    const safeLat = lat !== null && isFinite(lat) && lat >= -90 && lat <= 90 ? lat : null;
+    const safeLng = lng !== null && isFinite(lng) && lng >= -180 && lng <= 180 ? lng : null;
+    const safeAddedBy = (added_by || '').toString().slice(0, 40) || 'player';
+    const safeStatus = ['pending', 'approved', 'rejected'].includes(status) ? status : 'pending';
+
+    // Random filename
+    const { randomUUID } = await import('crypto');
+    const fileName = `${randomUUID()}.${detected.ext}`;
 
     // Upload to Supabase Storage
     const { error: storageError } = await supabase.storage
       .from('images')
       .upload(fileName, buffer, {
-        contentType: file.type,
-        upsert: true
+        contentType: detected.mime,
+        upsert: false
       });
 
     if (storageError) {
@@ -65,10 +71,10 @@ export async function POST(request: NextRequest) {
       .from('photos')
       .insert({
         url: publicUrl,
-        lat,
-        lng,
-        added_by,
-        status
+        lat: safeLat,
+        lng: safeLng,
+        added_by: safeAddedBy,
+        status: safeStatus
       })
       .select()
       .single();

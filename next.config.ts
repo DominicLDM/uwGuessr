@@ -1,5 +1,19 @@
 import type { NextConfig } from "next";
 
+const csp = [
+  "default-src * data: blob:",
+  "script-src * data: blob:",
+  "style-src * data: blob:",
+  "img-src * data: blob:",
+  "connect-src * data: blob:",
+  "worker-src * blob: data:",
+  "child-src * blob: data:",
+  "frame-src * blob: data:",
+  "base-uri *",
+  "object-src *",
+  "frame-ancestors *",
+].join('; ');
+
 const nextConfig: NextConfig = {
   /* config options here */
   // Enable compression
@@ -25,6 +39,21 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'Content-Security-Policy', value: csp },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), microphone=()' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
+        ],
+      },
+    ];
   },
 };
 

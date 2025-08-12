@@ -8,8 +8,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useApolloClient, gql } from '@apollo/client'
 import { Button } from "@/components/ui/button"
-// import { Card, CardContent } from "@/components/ui/card"
-// import { Badge } from "@/components/ui/badge"
 import { Play, Calendar, Bird } from "lucide-react"
 import Link from "next/link"
 import TopoBackground from "@/components/TopoBackground"
@@ -259,23 +257,6 @@ export default function Component() {
             Daily Challenge
           </Button>
         </div>
-        {/* Stats Section */}
-        {/* <Card className="w-full max-w-sm transition-all duration-500 bg-white/90 border-black-200 backdrop-blur-4px relative z-5 shadow-lg hover:shadow-xl">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-2">
-                {React.createElement(stats[currentStat].icon, {
-                  className: "w-6 h-6 text-yellow-500 mr-2",
-                })}
-                <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 border-yellow-500/30 text-xs">
-                  Live Stats
-                </Badge>
-              </div>
-              <div className="text-3xl font-bold text-black-600 mb-1">{stats[currentStat].value}</div>
-              <div className="text-sm text-slate-700">{stats[currentStat].label}</div>
-            </div>
-          </CardContent>
-        </Card> */}
       </main>
 
       {/* Footer */}
