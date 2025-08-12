@@ -1,12 +1,10 @@
 "use client"
-// --- Add missing constants ---
-// Editable values
-const res = 18 // divide canvas width/height by this, lower number means more cells
-const baseZOffset = 0.00005; // how quickly the noise should move
-const thresholdIncrement = 5; // cells range from 0-100, draw line for every step of this increment
-const thickLineThresholdMultiple = 3; // every x steps draw a thicker line
-const lineColors = ['rgba(255, 215, 0, 0.8)', 'rgba(253, 224, 71, 0.8)', 'rgba(250, 204, 21, 0.8)']; // 3 shades of yellow/gold
-const mouseDown = true; // enable mouse interaction
+const res = 18;
+const baseZOffset = 0.00005;
+const thresholdIncrement = 5;
+const thickLineThresholdMultiple = 3;
+const lineColors = ['rgba(255, 215, 0, 0.8)', 'rgba(253, 224, 71, 0.8)', 'rgba(250, 204, 21, 0.8)'];
+const mouseDown = true;
 
 const binaryToType = (nw: number, ne: number, se: number, sw: number) => {
   const a = [nw, ne, se, sw];

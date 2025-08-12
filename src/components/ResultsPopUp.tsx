@@ -85,10 +85,6 @@ export default function ResultsPopUp({
         setIsMapReady(true);
       });
 
-      map.on('error', (e) => {
-        console.error('Mapbox error:', e);
-      });
-
       mapRef.current = map;
     }, 100);
 

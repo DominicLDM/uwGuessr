@@ -1,14 +1,17 @@
 import type { NextConfig } from "next";
 
 const csp = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "img-src 'self' data: blob: https:",
-  "connect-src 'self' https:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'",
+  "default-src * data: blob:",
+  "script-src * data: blob:",
+  "style-src * data: blob:",
+  "img-src * data: blob:",
+  "connect-src * data: blob:",
+  "worker-src * blob: data:",
+  "child-src * blob: data:",
+  "frame-src * blob: data:",
+  "base-uri *",
+  "object-src *",
+  "frame-ancestors *",
 ].join('; ');
 
 const nextConfig: NextConfig = {

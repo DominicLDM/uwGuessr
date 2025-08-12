@@ -82,7 +82,7 @@ function ModContent() {
       </div>
       <div className="space-y-10">
         {currentPhoto ? (
-          <ModerationCard key={currentPhoto.id} photo={currentPhoto} onModerated={handleModerated} />
+          <ModerationCard key={currentPhoto.id} photo={currentPhoto} onModerated={handleModerated} adminEmail={user?.email} />
         ) : (
           <div className="text-center text-lg text-green-700 font-semibold py-20">No more pending photos to moderate! 🎉</div>
         )}

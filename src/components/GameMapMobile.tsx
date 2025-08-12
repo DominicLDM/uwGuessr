@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-// import { useGameState } from '@/hooks/useGameState'
 import mapboxgl from 'mapbox-gl'
 import { ChevronUp, X } from 'lucide-react'
 import { campusBoundaries } from './campusBoundaries';

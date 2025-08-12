@@ -2,36 +2,11 @@ import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_ANON_KEY!
 );
-
-const AUTH0_ISSUER = process.env.AUTH0_ISSUER; // e.g., https://your-tenant.us.auth0.com/
-const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE; // your API identifier
-const JWKS = AUTH0_ISSUER ? createRemoteJWKSet(new URL(`${AUTH0_ISSUER}/.well-known/jwks.json`)) : undefined;
-
-async function getUserFromAuthHeader(req: NextRequest): Promise<{ email?: string } | null> {
-  try {
-    const auth = req.headers.get('authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-    if (!token || !JWKS || !AUTH0_ISSUER || !AUTH0_AUDIENCE) return null;
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: AUTH0_ISSUER,
-      audience: AUTH0_AUDIENCE,
-    });
-    return payload as any;
-  } catch {
-    return null;
-  }
-}
-
-function isModEmail(email?: string | null): boolean {
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-  return !!email && !!adminEmail && email === adminEmail;
-}
 
 const typeDefs = `
   type Photo {
@@ -194,7 +169,7 @@ const resolvers = {
         .order('score', { ascending: false })
         .order('time_taken', { ascending: true });
       if (error) throw new Error(error.message);
-      const rows = ((data as unknown) as DailyScoreRow[]) ?? [];
+      const rows = (data as DailyScoreRow[]) ?? [];
       const mapped = rows.map((row) => ({
         uid: row.id ?? null,
         day: row.date,
@@ -209,10 +184,12 @@ const resolvers = {
     approvePhoto: async (
       _: unknown,
       { id, lat, lng }: { id: string; lat: number; lng: number },
-      ctx: { request: NextRequest; user?: { email?: string } }
+      ctx: { request: NextRequest }
     ) => {
-      const user = await getUserFromAuthHeader(ctx.request);
-      if (!isModEmail(user?.email)) throw new Error('Unauthorized');
+      // Check for admin email in request headers
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      const email = ctx.request.headers.get('x-admin-email');
+      if (!email || email !== adminEmail) throw new Error('Unauthorized');
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'approved', lat, lng })
@@ -225,10 +202,12 @@ const resolvers = {
     rejectPhoto: async (
       _: unknown,
       { id }: { id: string },
-      ctx: { request: NextRequest; user?: { email?: string } }
+      ctx: { request: NextRequest }
     ) => {
-      const user = await getUserFromAuthHeader(ctx.request);
-      if (!isModEmail(user?.email)) throw new Error('Unauthorized');
+      // Check for admin email in request headers
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      const email = ctx.request.headers.get('x-admin-email');
+      if (!email || email !== adminEmail) throw new Error('Unauthorized');
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'rejected' })
@@ -253,7 +232,7 @@ const resolvers = {
         .single();
 
       if (error) throw new Error(error.message);
-      const row = (data as unknown) as DailyScoreRow;
+      const row = data as DailyScoreRow;
       return {
         id: row?.id ?? null,
         date: row?.date ?? date,

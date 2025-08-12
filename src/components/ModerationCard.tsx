@@ -39,9 +39,9 @@ status: string
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
-type ModerationCardProps = { photo: Photo; onModerated?: () => void };
+type ModerationCardProps = { photo: Photo; onModerated?: () => void; adminEmail?: string };
 
-export default function ModerationCard({ photo, onModerated }: ModerationCardProps) {
+export default function ModerationCard({ photo, onModerated, adminEmail }: ModerationCardProps) {
   const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
 	photo.lat != null && photo.lng != null ? { lat: photo.lat, lng: photo.lng } : null
   );
@@ -90,12 +90,26 @@ export default function ModerationCard({ photo, onModerated }: ModerationCardPro
 
   const handleApprove = async () => {
 	if (!marker) return alert('Select a location first.');
-	await approvePhoto({ variables: { id: photo.id, lat: marker.lat, lng: marker.lng } });
+	await approvePhoto({
+	  variables: { id: photo.id, lat: marker.lat, lng: marker.lng },
+	  context: {
+		headers: {
+		  'x-admin-email': adminEmail || ''
+		}
+	  }
+	});
 	if (onModerated) onModerated();
   };
 
   const handleReject = async () => {
-	await rejectPhoto({ variables: { id: photo.id } });
+	await rejectPhoto({
+	  variables: { id: photo.id },
+	  context: {
+		headers: {
+		  'x-admin-email': adminEmail || ''
+		}
+	  }
+	});
 	if (onModerated) onModerated();
   };
 

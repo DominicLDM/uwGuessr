@@ -41,7 +41,7 @@ function calculateScore(distance: number): number {
   if (distance >= maxDistance) return 0
   
   // Tuned so that 100m gives ~2.5k points, 500m gives ~500 points
-  const decayConstant = 0.004 // Adjust this to change curve steepness
+  const decayConstant = 0.003 // Adjust this to change curve steepness
   const score = maxScore * Math.exp(-decayConstant * distance)
   
   return Math.round(score)
