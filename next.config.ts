@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const csp = [
-  "default-src * data: blob:",
-  "script-src * data: blob:",
-  "style-src * data: blob:",
+  "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'",
+  "script-src * data: blob: 'unsafe-inline' 'unsafe-eval'",
+  "style-src * data: blob: 'unsafe-inline'",
   "img-src * data: blob:",
   "connect-src * data: blob:",
   "worker-src * blob: data:",
