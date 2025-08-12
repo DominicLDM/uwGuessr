@@ -1,12 +1,37 @@
 import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import { createClient } from '@supabase/supabase-js';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_ANON_KEY!
 );
+
+const AUTH0_ISSUER = process.env.AUTH0_ISSUER; // e.g., https://your-tenant.us.auth0.com/
+const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE; // your API identifier
+const JWKS = AUTH0_ISSUER ? createRemoteJWKSet(new URL(`${AUTH0_ISSUER}/.well-known/jwks.json`)) : undefined;
+
+async function getUserFromAuthHeader(req: NextRequest): Promise<{ email?: string } | null> {
+  try {
+    const auth = req.headers.get('authorization') || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token || !JWKS || !AUTH0_ISSUER || !AUTH0_AUDIENCE) return null;
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: AUTH0_ISSUER,
+      audience: AUTH0_AUDIENCE,
+    });
+    return payload as any;
+  } catch {
+    return null;
+  }
+}
+
+function isModEmail(email?: string | null): boolean {
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  return !!email && !!adminEmail && email === adminEmail;
+}
 
 const typeDefs = `
   type Photo {
@@ -181,7 +206,13 @@ const resolvers = {
     },
   },
   Mutation: {
-    approvePhoto: async (_: unknown, { id, lat, lng }: { id: string, lat: number, lng: number }) => {
+    approvePhoto: async (
+      _: unknown,
+      { id, lat, lng }: { id: string; lat: number; lng: number },
+      ctx: { request: NextRequest; user?: { email?: string } }
+    ) => {
+      const user = await getUserFromAuthHeader(ctx.request);
+      if (!isModEmail(user?.email)) throw new Error('Unauthorized');
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'approved', lat, lng })
@@ -191,7 +222,13 @@ const resolvers = {
       if (error) throw new Error(error.message);
       return data;
     },
-    rejectPhoto: async (_: unknown, { id }: { id: string }) => {
+    rejectPhoto: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: { request: NextRequest; user?: { email?: string } }
+    ) => {
+      const user = await getUserFromAuthHeader(ctx.request);
+      if (!isModEmail(user?.email)) throw new Error('Unauthorized');
       const { data, error } = await supabase
         .from('photos')
         .update({ status: 'rejected' })
@@ -205,9 +242,13 @@ const resolvers = {
       _: unknown,
       { date, name, score, time_taken }: { date: string; name: string; score: number; time_taken: number }
     ) => {
+      const safeName = (name || '').toString().slice(0, 50);
+      const clampedScore = Math.max(0, Math.min(score, 100000));
+      const clampedTime = Math.max(0, Math.min(time_taken, 24 * 60 * 60));
+
       const { data, error } = await supabase
         .from('daily_scores')
-        .insert({ date, name, score, time_taken })
+        .insert({ date, name: safeName, score: clampedScore, time_taken: clampedTime })
         .select()
         .single();
 
@@ -216,9 +257,9 @@ const resolvers = {
       return {
         id: row?.id ?? null,
         date: row?.date ?? date,
-        name: row?.name ?? name,
-        score: row?.score ?? score,
-        time_taken: row?.time_taken ?? time_taken,
+        name: row?.name ?? safeName,
+        score: row?.score ?? clampedScore,
+        time_taken: row?.time_taken ?? clampedTime,
         created_at: row?.created_at ?? null,
       };
     },
@@ -227,12 +268,18 @@ const resolvers = {
 
 const server = new ApolloServer({ typeDefs, resolvers });
 
-const handler = startServerAndCreateNextHandler(server);
+const handler = startServerAndCreateNextHandler(server, {
+  context: async (request: NextRequest) => ({ request }),
+});
 
-export async function GET(request: NextRequest) {
-  return handler(request);
+export async function GET() {
+  return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
 }
 
 export async function POST(request: NextRequest) {
+  const cl = request.headers.get('content-length');
+  if (cl && Number(cl) > 100_000) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+  }
   return handler(request);
 }
