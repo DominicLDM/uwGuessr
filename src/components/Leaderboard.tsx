@@ -105,11 +105,11 @@ export default function LeaderboardModal({
   // Process the data
   const processedData = React.useMemo(() => {
     // Use leaderboardData prop if provided, else use GraphQL data
-    const scores: ScoreData[] = leaderboardData ?? (data?.allScores ? data.allScores.map((p: any) => ({
+    const scores: ScoreData[] = leaderboardData ?? (data?.allScores ? data.allScores.map((p: { uid: string; name: string; score: number; timetaken: number; rounds?: { score: number; timetaken: number }[] }) => ({
       uid: p.uid,
       name: p.name,
       rounds: p.rounds ?? [{ score: p.score, timetaken: p.timetaken }],
-      totalScore: p.rounds ? p.rounds.reduce((sum: number, r: any) => sum + r.score, 0) : p.score ?? 0
+      totalScore: p.rounds ? p.rounds.reduce((sum: number, r: { score: number; timetaken: number }) => sum + r.score, 0) : p.score ?? 0
     })) : []);
     // Get top 5
     const top5 = scores.slice(0, 5);
