@@ -18,22 +18,18 @@ interface LeaderboardModalProps {
   onClose: () => void;
 }
 
-interface RoundData {
-  score: number;
-  timetaken: number;
-}
 interface ScoreData {
   uid: string;
   name: string;
-  rounds: RoundData[];
-  totalScore: number;
+  score: number;
+  timetaken: number;
 }
 
 export default function LeaderboardModal({ 
   show,
   onClose,
   leaderboardData
-}: LeaderboardModalProps & { leaderboardData?: ScoreData[] }) {
+}: LeaderboardModalProps & { leaderboardData?: Array<{ uid: string; name: string; rounds: Array<{ score: number; timetaken: number }>; totalScore: number }> }) {
 
   // Get EDT-localized date
   const nyDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -104,45 +100,46 @@ export default function LeaderboardModal({
 
   // Process the data
   const processedData = React.useMemo(() => {
-    const scores: ScoreData[] = data?.allScores ? data.allScores.map((p: { uid: string; name: string; score: number; timetaken: number; rounds?: { score: number; timetaken: number }[] }) => ({
-      uid: p.uid,
-      name: p.name,
-      rounds: p.rounds ?? [{ score: p.score, timetaken: p.timetaken }],
-      totalScore: p.rounds ? p.rounds.reduce((sum: number, r: { score: number; timetaken: number }) => sum + r.score, 0) : p.score ?? 0
-    })) : [];
+    if (!data?.allScores) return null;
+    const scores: ScoreData[] = [...data.allScores];
+    // Sort by score descending, then by time ascending (faster time breaks ties)
+    scores.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.timetaken - b.timetaken;
+    });
     // Get top 5
     const top5 = scores.slice(0, 5);
 
     // Calculate average score and time
     const totalPlayers = scores.length;
-    const avgScore = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.totalScore, 0) / totalPlayers) : 0;
-    const avgTime = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + (s.rounds?.reduce((t, r) => t + r.timetaken, 0) ?? 0), 0) / totalPlayers) : 0;
+    const avgScore = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / totalPlayers) : 0;
+    const avgTime = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.timetaken, 0) / totalPlayers) : 0;
     return {
       top5,
       totalPlayers,
       avgScore,
       avgTime
     };
-  }, [data, leaderboardData]);
+  }, [data]);
 
   // Share button logic
   const [shareStatus, setShareStatus] = React.useState<string>("");
   const handleShare = React.useCallback(() => {
-    if (!processedData) return;
-    // Emoji mapping for scores (green = high, yellow = medium, red = low)
-    const scoreEmojis = ["🟩", "🟨", "🟥"];
-    // Only share for the first player (local)
-    const player = processedData.top5[0];
-    if (!player) return;
-    let text = `uwGuessr #${dailyNumber} ${player.totalScore}/25000\n`;
-    player.rounds.forEach((r, i) => {
-      let scoreIdx = 2; // default red
-      if (r.score >= 4000 && r.score <= 5000) scoreIdx = 0; // green
-      else if (r.score >= 1000 && r.score < 4000) scoreIdx = 1; // yellow
-      // else 0-999 is red
-      text += `${i+1}: ${scoreEmojis[scoreIdx]} ${r.score}\n`;
-    });
-    text += `Play: https://uwguessr.com`;
+    if (!leaderboardData || leaderboardData.length === 0) return;
+    const localPlayer = leaderboardData.find((p) => p.uid === 'local-player');
+    if (!localPlayer) return;
+    // Emoji mapping for round scores
+    const getEmoji = (score: number) => {
+      if (score >= 4000) return '🟩';
+      if (score >= 1000) return '🟨';
+      return '🟥';
+    };
+    // Show emoji and score for each round, each on a new line
+    const roundEmojis = localPlayer.rounds
+      ? localPlayer.rounds.map((r) => `${getEmoji(r.score)} ${r.score}`).join('\n')
+      : '';
+    const totalScore = localPlayer.totalScore || 0;
+    const text = `uwGuessr #${dailyNumber} ${totalScore}/25000\n${roundEmojis}\nPlay: https://uwguessr.com`;
     navigator.clipboard.writeText(text).then(() => {
       setShareStatus("Copied!");
       setTimeout(() => setShareStatus(""), 1000);
@@ -150,7 +147,7 @@ export default function LeaderboardModal({
       setShareStatus("Failed to copy");
       setTimeout(() => setShareStatus(""), 1000);
     });
-  }, [processedData, dailyNumber]);
+  }, [leaderboardData, dailyNumber]);
 
   const getRankTextColor = (rank: number): string => {
     switch (rank) {
@@ -242,12 +239,10 @@ export default function LeaderboardModal({
                           {rank}. {player.name}
                         </div>
                         <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-sans tabular-nums">
-                          {/* Show only total time (sum of rounds, convert ms to s) */}
-                          {formatTime(Math.floor(player.rounds.reduce((sum, r) => sum + r.timetaken, 0) / 1000))}
+                          {formatTime(player.timetaken)}
                         </div>
                         <div className="text-right justify-self-end font-bold text-xs sm:text-sm md:text-base font-sans tabular-nums">
-                          {/* Show only total score */}
-                          {player.totalScore.toLocaleString('en-US')}
+                          {player.score.toLocaleString('en-US')}
                         </div>
                       </div>
                     );
@@ -258,7 +253,7 @@ export default function LeaderboardModal({
                   <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 items-center px-3 sm:px-3 md:px-4">
                     <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
                     <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-medium font-sans tabular-nums">
-                      {formatTime(Math.floor(processedData.avgTime / 1000))}
+                      {formatTime(processedData.avgTime)}
                     </div>
                     <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-bold font-sans tabular-nums">
                       {processedData.avgScore.toLocaleString('en-US')}
