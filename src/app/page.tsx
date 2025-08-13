@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Play, Calendar, Bird } from "lucide-react"
 import Link from "next/link"
 import TopoBackground from "@/components/TopoBackground"
+import AnimatedUnderline from "@/components/underline"
 
 // GraphQL queries for prewarming
 const GET_RANDOM_PHOTOS = gql`
@@ -44,45 +45,57 @@ const PING_QUERY = gql`
 
 export default function Component() {
   const [isGooseMode, setIsGooseMode] = useState(false)
+  const [logoVisible, setLogoVisible] = useState(false)
+  const [isLogoLoaded, setIsLogoLoaded] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [isAboutAnimating, setIsAboutAnimating] = useState(false)
+  const [startUnderline, setStartUnderline] = useState(false)
   const router = useRouter()
   const client = useApolloClient()
 
   // Prewarm GraphQL connection when homepage loads
   useEffect(() => {
+    // If image is already loaded from cache, show immediately
+    if (isLogoLoaded) {
+      setLogoVisible(true);
+      setStartUnderline(true);
+      return;
+    }
+    // Otherwise, fade in after mount and start underline animation
+    const timer = setTimeout(() => {
+      setLogoVisible(true);
+      setStartUnderline(true);
+    }, 100);
     // Clean up old daily data (older than 7 days)
     const cleanupOldDailyData = () => {
       const nyDate = new Date(
         new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
       );
       const oneWeekAgo = new Date(nyDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && (key.startsWith('uwGuessrDaily_') || key.startsWith('uwGuessrDailyProgress_'))) {
           // Extract date from key (format: uwGuessrDaily_2025-01-15 or uwGuessrDailyProgress_2025-01-15)
           const dateStr = key.split('_')[1];
           if (dateStr) {
-          const keyDate = new Date(dateStr);
-          // Compare only yyyy-mm-dd strings for EDT consistency
-          const keyYear = keyDate.getFullYear();
-          const keyMonth = String(keyDate.getMonth() + 1).padStart(2, '0');
-          const keyDay = String(keyDate.getDate()).padStart(2, '0');
-          const keyDateStr = `${keyYear}-${keyMonth}-${keyDay}`;
-          const oneWeekAgoYear = oneWeekAgo.getFullYear();
-          const oneWeekAgoMonth = String(oneWeekAgo.getMonth() + 1).padStart(2, '0');
-          const oneWeekAgoDay = String(oneWeekAgo.getDate()).padStart(2, '0');
-          const oneWeekAgoStr = `${oneWeekAgoYear}-${oneWeekAgoMonth}-${oneWeekAgoDay}`;
-          if (keyDateStr < oneWeekAgoStr) {
+            const keyDate = new Date(dateStr);
+            // Compare only yyyy-mm-dd strings for EDT consistency
+            const keyYear = keyDate.getFullYear();
+            const keyMonth = String(keyDate.getMonth() + 1).padStart(2, '0');
+            const keyDay = String(keyDate.getDate()).padStart(2, '0');
+            const keyDateStr = `${keyYear}-${keyMonth}-${keyDay}`;
+            const oneWeekAgoYear = oneWeekAgo.getFullYear();
+            const oneWeekAgoMonth = String(oneWeekAgo.getMonth() + 1).padStart(2, '0');
+            const oneWeekAgoDay = String(oneWeekAgo.getDate()).padStart(2, '0');
+            const oneWeekAgoStr = `${oneWeekAgoYear}-${oneWeekAgoMonth}-${oneWeekAgoDay}`;
+            if (keyDateStr < oneWeekAgoStr) {
               localStorage.removeItem(key);
             }
           }
         }
       }
     };
-    
     cleanupOldDailyData();
 
     // Warm up the connection with a ping
@@ -103,6 +116,8 @@ export default function Component() {
       variables: { count: 5 },
       fetchPolicy: 'cache-first'
     }).catch(err => console.log('Daily photos prefetch failed:', err));
+
+    return () => clearTimeout(timer);
   }, [client]);
 
   const handleNavigation = (path: string) => {
@@ -188,45 +203,58 @@ export default function Component() {
         <div className="text-center mb-8 relative z-10">
           <div className="relative inline-block">
             <h1 className="text-[4.3rem] md:text-[7rem] font-black tracking-tight -mb-4 md:-mb-7 flex items-center justify-center">
-              <span className="text-yellow-500 mr-0.5">uw</span>
-              <span className="text-black flex items-center">
-                {isGooseMode ? (
-                  <>
-                    <Image
-                      src="/G.svg"
-                      alt="G"
-                      className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
-                      width={96}
-                      height={96}
-                      priority
-                    />eesr
-                  </>
-                ) : (
-                  <>
-                    <Image
-                      src="/G.svg"
-                      alt="G"
-                      className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
-                      width={96}
-                      height={96}
-                      priority
-                    />uessr
-                  </>
-                )}
+              <span className={`flex items-center transition-opacity duration-700 ${logoVisible ? 'opacity-100' : 'opacity-0'}`}>
+                <span className="text-yellow-500 mr-0.5">uw</span>
+                <span className="text-black flex items-center">
+                  {isGooseMode ? (
+                    <>
+                      <Image
+                        src="/G.svg"
+                        alt="G"
+                        className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
+                        width={96}
+                        height={96}
+                        priority
+                        onLoad={() => {
+                          setIsLogoLoaded(true);
+                          setLogoVisible(true);
+                        }}
+                      />eesr
+                    </>
+                  ) : (
+                    <>
+                      <Image
+                        src="/G.svg"
+                        alt="G"
+                        className="inline-block align-middle md:w-[96px] md:h-[96px] w-[54px] h-[54px]"
+                        width={96}
+                        height={96}
+                        priority
+                        onLoad={() => {
+                          setIsLogoLoaded(true);
+                          setLogoVisible(true);
+                        }}
+                      />uessr
+                    </>
+                  )}
+                </span>
               </span>
             </h1>
           </div>
 
-          <div className="relative w-[250px] h-[50px] md:w-[350px] md:h-[70px] mx-auto mb-5">
-            <Image
-              src="/underline.png"
-              alt="Brush stroke underline"
-              fill
-              className="object-contain"
-              priority
-              aria-hidden="true"
-              sizes="(max-width: 768px) 250px, 350px"
-            />
+          <div className="relative w-[275px] h-[50px] md:w-[400px] md:h-[70px] mx-auto mb-5">
+            <div className="absolute inset-0" style={{ background: 'transparent', boxShadow: 'none', border: 'none' }}>
+              {startUnderline && (
+                <AnimatedUnderline
+                  key={startUnderline ? 'underline-on' : 'underline-off'}
+                  width={400}
+                  height={70}
+                  mainAnimationDuration={1.4}
+                  style={{ width: '100%', height: '100%', background: 'transparent', boxShadow: 'none', border: 'none' }}
+                  className="object-contain"
+                />
+              )}
+            </div>
           </div>
 
           <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-slate-900">
