@@ -290,7 +290,7 @@ export default function LeaderboardModal({
           {/* Share button bottom right */}
           <button
             onClick={handleShare}
-            className="absolute bottom-3 right-3 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-colors"
+            className="absolute bottom-3 right-3 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-colors cursor-pointer"
             style={{zIndex: 10}}
             aria-label="Share leaderboard"
           >
