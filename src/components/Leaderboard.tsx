@@ -1,5 +1,5 @@
 import React from "react";
-import { Trophy, } from "lucide-react";
+import { Trophy, Link } from "lucide-react";
 import { useQuery, gql } from '@apollo/client';
 
 const ALL_SCORES_QUERY = gql`
@@ -18,17 +18,22 @@ interface LeaderboardModalProps {
   onClose: () => void;
 }
 
-interface ScoreData {
-  uid: string;
-  name: string;
+interface RoundData {
   score: number;
   timetaken: number;
 }
+interface ScoreData {
+  uid: string;
+  name: string;
+  rounds: RoundData[];
+  totalScore: number;
+}
 
 export default function LeaderboardModal({ 
-  show, 
+  show,
   onClose,
-}: LeaderboardModalProps) {
+  leaderboardData
+}: LeaderboardModalProps & { leaderboardData?: ScoreData[] }) {
 
   // Get EDT-localized date
   const nyDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -44,12 +49,20 @@ export default function LeaderboardModal({
   const diffTime = edtDate.getTime() - startDate.getTime();
   const dailyNumber = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1);
 
-  const { data, loading, error, refetch } = useQuery(ALL_SCORES_QUERY, {
+  const { data, loading: gqlLoading, error, refetch } = useQuery(ALL_SCORES_QUERY, {
     variables: { day: today },
     notifyOnNetworkStatusChange: true,
     fetchPolicy: 'network-only',
     nextFetchPolicy: 'cache-first'
   });
+  const [minLoading, setMinLoading] = React.useState(true);
+  React.useEffect(() => {
+    if (!show) return;
+    setMinLoading(true);
+    const timer = setTimeout(() => setMinLoading(false), 700);
+    return () => clearTimeout(timer);
+  }, [show, today]);
+  const loading = gqlLoading || minLoading;
 
   // Refetch
   React.useEffect(() => {
@@ -91,25 +104,54 @@ export default function LeaderboardModal({
 
   // Process the data
   const processedData = React.useMemo(() => {
-    if (!data?.allScores) return null;
-
-    const scores: ScoreData[] = [...data.allScores];
-    
+    // Use leaderboardData prop if provided, else use GraphQL data
+    const scores: ScoreData[] = leaderboardData ?? (data?.allScores ? data.allScores.map((p: any) => ({
+      uid: p.uid,
+      name: p.name,
+      rounds: p.rounds ?? [{ score: p.score, timetaken: p.timetaken }],
+      totalScore: p.rounds ? p.rounds.reduce((sum: number, r: any) => sum + r.score, 0) : p.score ?? 0
+    })) : []);
     // Get top 5
     const top5 = scores.slice(0, 5);
 
     // Calculate average score and time
     const totalPlayers = scores.length;
-    const avgScore = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / totalPlayers) : 0;
-    const avgTime = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.timetaken, 0) / totalPlayers) : 0;
-
+    const avgScore = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + s.totalScore, 0) / totalPlayers) : 0;
+    const avgTime = totalPlayers > 0 ? Math.round(scores.reduce((sum, s) => sum + (s.rounds?.reduce((t, r) => t + r.timetaken, 0) ?? 0), 0) / totalPlayers) : 0;
     return {
       top5,
       totalPlayers,
       avgScore,
       avgTime
     };
-  }, [data]);
+  }, [data, leaderboardData]);
+
+  // Share button logic
+  const [shareStatus, setShareStatus] = React.useState<string>("");
+  const handleShare = React.useCallback(() => {
+    if (!processedData) return;
+    // Emoji mapping for scores (green = high, yellow = medium, red = low)
+    const scoreEmojis = ["🟩", "🟨", "🟥"];
+    // Only share for the first player (local)
+    const player = processedData.top5[0];
+    if (!player) return;
+    let text = `uwGuessr #${dailyNumber} ${player.totalScore}/25000\n`;
+    player.rounds.forEach((r, i) => {
+      let scoreIdx = 2; // default red
+      if (r.score >= 4000 && r.score <= 5000) scoreIdx = 0; // green
+      else if (r.score >= 1000 && r.score < 4000) scoreIdx = 1; // yellow
+      // else 0-999 is red
+      text += `${i+1}: ${scoreEmojis[scoreIdx]} ${r.score}\n`;
+    });
+    text += `Play: https://uwguessr.com`;
+    navigator.clipboard.writeText(text).then(() => {
+      setShareStatus("Copied!");
+      setTimeout(() => setShareStatus(""), 1000);
+    }, () => {
+      setShareStatus("Failed to copy");
+      setTimeout(() => setShareStatus(""), 1000);
+    });
+  }, [processedData, dailyNumber]);
 
   const getRankTextColor = (rank: number): string => {
     switch (rank) {
@@ -201,10 +243,12 @@ export default function LeaderboardModal({
                           {rank}. {player.name}
                         </div>
                         <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-sans tabular-nums">
-                          {formatTime(player.timetaken)}
+                          {/* Show only total time (sum of rounds, convert ms to s) */}
+                          {formatTime(Math.floor(player.rounds.reduce((sum, r) => sum + r.timetaken, 0) / 1000))}
                         </div>
                         <div className="text-right justify-self-end font-bold text-xs sm:text-sm md:text-base font-sans tabular-nums">
-                          {player.score.toLocaleString('en-US')}
+                          {/* Show only total score */}
+                          {player.totalScore.toLocaleString('en-US')}
                         </div>
                       </div>
                     );
@@ -215,7 +259,7 @@ export default function LeaderboardModal({
                   <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 items-center px-3 sm:px-3 md:px-4">
                     <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
                     <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-medium font-sans tabular-nums">
-                      {formatTime(processedData.avgTime)}
+                      {formatTime(Math.floor(processedData.avgTime / 1000))}
                     </div>
                     <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-bold font-sans tabular-nums">
                       {processedData.avgScore.toLocaleString('en-US')}
@@ -243,6 +287,19 @@ export default function LeaderboardModal({
           </div>
           {/* Countdown to midnight EDT */}
           <div className="text-center text-[11px] sm:text-xs text-gray-500">New Daily in {countdown}</div>
+          {/* Share button bottom right */}
+          <button
+            onClick={handleShare}
+            className="absolute bottom-3 right-3 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-colors"
+            style={{zIndex: 10}}
+            aria-label="Share leaderboard"
+          >
+            <span>Share</span>
+            <Link size={22} className="text-black" />
+          </button>
+          {shareStatus && (
+            <div className="absolute bottom-16 right-3 bg-black text-white text-xs rounded px-2 py-1 shadow-lg">{shareStatus}</div>
+          )}
         </div>
       </div>
     </div>

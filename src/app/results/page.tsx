@@ -455,6 +455,12 @@ function ResultsPageContent() {
                 <Leaderboard 
                     show={showLeaderboard} 
                     onClose={() => setShowLeaderboard(false)} 
+                    leaderboardData={results ? [{
+                        uid: 'local-player',
+                        name: 'You',
+                        rounds: results.map(r => ({ score: r.score, timetaken: r.timeSpent })),
+                        totalScore: results.reduce((sum, r) => sum + r.score, 0)
+                    }] : []}
                 />
                 </div>
             </div>
