@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import mapboxgl from 'mapbox-gl'
 import imageCompression from 'browser-image-compression';
@@ -14,6 +15,11 @@ if (campusBoundaries && campusBoundaries.type !== "FeatureCollection") {
 }
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function UploadPage() {
     const router = useRouter();
@@ -29,6 +35,7 @@ export default function UploadPage() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [showMap, setShowMap] = useState(false);
     const [mapLoaded, setMapLoaded] = useState(false);
+    const [userToken, setUserToken] = useState<string | null>(null);
 
     // Memoized map initialization
     const initializeMap = useCallback(() => {
@@ -108,6 +115,20 @@ export default function UploadPage() {
                 mapRef.current = null;
             }
         };
+    }, []);
+
+    // On mount, sign in anonymously and get JWT
+    useEffect(() => {
+        async function signInAnon() {
+            const { data, error } = await supabase.auth.signInAnonymously();
+            if (error) {
+                console.error('Supabase anon auth error:', error);
+                setUserToken(null);
+            } else {
+                setUserToken(data.session?.access_token || null);
+            }
+        }
+        signInAnon();
     }, []);
 
     useEffect(() => {
@@ -193,6 +214,10 @@ export default function UploadPage() {
             alert('Please select an image and mark a location on the map');
             return;
         }
+        if (!userToken) {
+            alert('User authentication failed. Please refresh and try again.');
+            return;
+        }
 
         setIsUploading(true);
 
@@ -200,12 +225,14 @@ export default function UploadPage() {
         formData.append('file', compressedImage);
         formData.append('lat', String(marker.lat));
         formData.append('lng', String(marker.lng));
-        formData.append('added_by', 'player'); // temp
         formData.append('status', 'pending');
 
         const response = await fetch('/api/upload-photo', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                Authorization: `Bearer ${userToken}`
+            }
         });
 
         if (response.ok) {

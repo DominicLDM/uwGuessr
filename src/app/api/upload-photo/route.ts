@@ -2,18 +2,38 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { fileTypeFromBuffer } from 'file-type';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Helper to get Supabase client with user's JWT
+function getAuthedClient(token: string) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Get JWT from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Missing or invalid authorization token' }, { status: 401 });
+    }
+    const token = authHeader.replace('Bearer ', '').trim();
+    if (!token) {
+      return NextResponse.json({ error: 'Missing token' }, { status: 401 });
+    }
+
+    const supabase = getAuthedClient(token);
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const lat = formData.get('lat') ? parseFloat(formData.get('lat') as string) : null;
     const lng = formData.get('lng') ? parseFloat(formData.get('lng') as string) : null;
-    const added_by = formData.get('added_by') as string;
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user?.id) {
+      return NextResponse.json({ error: 'Could not get user ID from token' }, { status: 401 });
+    }
+    const added_by = userData.user.id;
     const status = (formData.get('status') as string) || 'pending';
 
     if (!file) {
@@ -42,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Basic metadata validation/sanitization
     const safeLat = lat !== null && isFinite(lat) && lat >= -90 && lat <= 90 ? lat : null;
     const safeLng = lng !== null && isFinite(lng) && lng >= -180 && lng <= 180 ? lng : null;
-    const safeAddedBy = (added_by || '').toString().slice(0, 40) || 'player';
+    const safeAddedBy = added_by;
     const safeStatus = ['pending', 'approved', 'rejected'].includes(status) ? status : 'pending';
 
     // Random filename
