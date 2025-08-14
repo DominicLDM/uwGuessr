@@ -316,7 +316,13 @@ function ResultsPageContent() {
 
     const handleNameSubmit = (name: string) => {
         console.log('Name submitted:', name);
-        
+        // Save user info for today's daily in localStorage
+        const nyDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const year = nyDate.getFullYear();
+        const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+        const day = String(nyDate.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
+        localStorage.setItem(`uwGuessrDailyUser_${today}`, JSON.stringify({ name }));
         // Close name input and show leaderboard
         setShowNameInput(false);
         if (mode === 'daily') {

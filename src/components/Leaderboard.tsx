@@ -158,6 +158,23 @@ export default function LeaderboardModal({
     }
   };
 
+  // Get local user info for today's daily
+  const localUserKey = `uwGuessrDailyUser_${today}`;
+  const [localUser, setLocalUser] = React.useState<{ name: string } | null>(null);
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(localUserKey);
+      console.log("Stored local user:", stored);
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      } else {
+        setLocalUser(null);
+      }
+    } catch {
+      setLocalUser(null);
+    }
+  }, [localUserKey, show]);
+
   if (!show) return null;
 
   return (
@@ -204,15 +221,15 @@ export default function LeaderboardModal({
               {loading ? (
                 <>
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 items-center px-3 sm:px-3 md:px-4">
+                    <div key={i} className="grid grid-cols-[1fr_56px_80px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 items-center px-2 sm:px-3 md:px-4">
                       <div className={`font-bold text-sm sm:text-base md:text-lg ${getRankTextColor(i)}`}>
-                        {i}. <span className="inline-block align-middle h-4 w-24 bg-gray-200 rounded blur-[1px]" />
+                        {i}. <span className="inline-block align-middle h-3 w-16 sm:h-4 sm:w-24 bg-gray-200 rounded blur-[1px]" />
                       </div>
                       <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-sans tabular-nums">
-                        <span className="inline-block h-4 w-10 bg-gray-200 rounded blur-[1px]" />
+                        <span className="inline-block h-3 w-8 sm:h-4 sm:w-10 bg-gray-200 rounded blur-[1px]" />
                       </div>
                       <div className="text-right justify-self-end font-bold text-xs sm:text-sm md:text-base font-sans tabular-nums">
-                        <span className="inline-block h-4 w-16 bg-gray-200 rounded blur-[1px]" />
+                        <span className="inline-block h-3 w-12 sm:h-4 sm:w-16 bg-gray-200 rounded blur-[1px]" />
                       </div>
                     </div>
                   ))}
@@ -264,23 +281,56 @@ export default function LeaderboardModal({
             </div>
           </div>
 
-          {/* Leaderboard count */}
+          {/* Leaderboard count or user position */}
           <div className="text-center text-xs sm:text-sm md:text-base text-gray-600 mb-2">
             {loading ? (
               <div className="flex items-center justify-center space-x-2">
                 <span>Loading leaderboard</span>
-                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
               </div>
             ) : processedData ? (
-              <span className="text-xs text-gray-500">
-                {processedData.totalPlayers} {processedData.totalPlayers === 1 ? 'person' : 'people'} on the leaderboard today!
-              </span>
+              localUser ? (() => {
+                // Find user position by matching score and timetaken
+                const allScores: ScoreData[] = [...(data?.allScores ?? [])];
+                allScores.sort((a, b) => {
+                  if (b.score !== a.score) return b.score - a.score;
+                  return a.timetaken - b.timetaken;
+                });
+                // Get local user's total score and time from leaderboardData prop
+                let userScore = null;
+                let userTime = null;
+                if (leaderboardData && leaderboardData.length > 0) {
+                  userScore = leaderboardData[0].totalScore;
+                  // Local time to s
+                  userTime = Math.round(leaderboardData[0].rounds.reduce((sum, r) => sum + r.timetaken, 0) / 1000);
+                }
+                let userIdx = -1;
+                if (userScore !== null && userTime !== null) {
+                  userIdx = allScores.findIndex(p => p.score === userScore && p.timetaken === userTime);
+                }
+                if (userIdx !== -1) {
+                  return (
+                    <span className="text-s text-gray-600">
+                      You placed #{userIdx + 1}/{processedData.totalPlayers} today!
+                    </span>
+                  );
+                }
+                // fallback to normal count if not found
+                return (
+                  <span className="text-s text-gray-600">
+                    {processedData.totalPlayers} {processedData.totalPlayers === 1 ? 'person' : 'people'} on the leaderboard today!
+                  </span>
+                );
+              })() : (
+                <span className="text-s text-gray-600">
+                  {processedData.totalPlayers} {processedData.totalPlayers === 1 ? 'person' : 'people'} on the leaderboard today!
+                </span>
+              )
             ) : (
               <span>Unable to load leaderboard</span>
             )}
           </div>
           {/* Countdown to midnight EDT */}
-          <div className="text-center text-[11px] sm:text-xs text-gray-500">New Daily in {countdown}</div>
+          <div className="text-center text-[12px] sm:text-s text-gray-6 00">New Daily in {countdown}</div>
           {/* Share button bottom right */}
           <button
             onClick={handleShare}
