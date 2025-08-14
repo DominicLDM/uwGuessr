@@ -330,7 +330,7 @@ export default function LeaderboardModal({
             )}
           </div>
           {/* Countdown to midnight EDT */}
-          <div className="text-center text-[12px] sm:text-s text-gray-6 00">New Daily in {countdown}</div>
+          <div className="text-center text-[12px] sm:text-s text-gray-600">New Daily in {countdown}</div>
           {/* Share button bottom right */}
           <button
             onClick={handleShare}
