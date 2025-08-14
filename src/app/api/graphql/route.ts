@@ -222,7 +222,7 @@ const resolvers = {
       { date, name, score, time_taken }: { date: string; name: string; score: number; time_taken: number }
     ) => {
       const safeName = (name || '').toString().slice(0, 50);
-      const clampedScore = Math.max(0, Math.min(score, 100000));
+      const clampedScore = Math.max(0, Math.min(score, 25000));
       const clampedTime = Math.max(0, Math.min(time_taken, 24 * 60 * 60));
 
       const { data, error } = await supabase
