@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, Suspense } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { useApolloClient } from '@apollo/client'
 import { useSearchParams } from 'next/navigation';
@@ -38,6 +39,34 @@ function ResultsPageContent() {
     const [mapLoaded, setMapLoaded] = useState(false);
     const [selectedRound, setSelectedRound] = useState<number | null>(null);
     const markersRef = useRef<{ [key: number]: { guess: mapboxgl.Marker, actual: mapboxgl.Marker } }>({});
+    // Supabase client and token
+    const [supabaseToken, setSupabaseToken] = useState<string | null>(null);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+    // Get Supabase anonymous auth token on mount
+    useEffect(() => {
+        if (!supabase) {
+            return;
+        }
+        let isMounted = true;
+        supabase.auth.getSession().then(({ data }) => {
+            if (isMounted && data.session && data.session.access_token) {
+                setSupabaseToken(data.session.access_token);
+            } else {
+                // If no session, sign in anonymously
+                supabase.auth.signInAnonymously().then(({ data: signInData, error }) => {
+                    if (error) {
+                        console.error('Supabase anonymous sign-in error:', error);
+                    }
+                    if (isMounted && signInData.session && signInData.session.access_token) {
+                        setSupabaseToken(signInData.session.access_token);
+                    }
+                });
+            }
+        });
+        return () => { isMounted = false; };
+    }, [supabase]);
     // Detect mode
     const [mode, setMode] = useState<'random' | 'daily' | null>(null);
     const searchParams = useSearchParams();
@@ -456,6 +485,7 @@ function ResultsPageContent() {
                     onSubmit={handleNameSubmit}
                     totalScore={totalScore}
                     timeTaken={results ? results.reduce((sum, r) => sum + r.timeSpent, 0) : 0}
+                    supabaseToken={supabaseToken}
                 />
                 {/* Leaderboard, shows after name input or when button is clicked */}
                 <Leaderboard 

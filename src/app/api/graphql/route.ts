@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 const typeDefs = `
@@ -33,6 +33,7 @@ const typeDefs = `
     name: String
     score: Int
     time_taken: Int
+    user_id: String
     created_at: String
   }
   type Query {
@@ -44,7 +45,6 @@ const typeDefs = `
   type Mutation {
     approvePhoto(id: ID!, lat: Float!, lng: Float!): Photo
     rejectPhoto(id: ID!): Photo
-    addDailyScore(date: String!, name: String!, score: Int!, time_taken: Int!): DailyScore
   }
 `;
 
@@ -54,6 +54,7 @@ type DailyScoreRow = {
   name: string;
   score: number;
   time_taken: number;
+  user_id?: string | null;
   created_at?: string | null;
 };
 
@@ -216,31 +217,6 @@ const resolvers = {
         .single();
       if (error) throw new Error(error.message);
       return data;
-    },
-    addDailyScore: async (
-      _: unknown,
-      { date, name, score, time_taken }: { date: string; name: string; score: number; time_taken: number }
-    ) => {
-      const safeName = (name || '').toString().slice(0, 50);
-      const clampedScore = Math.max(0, Math.min(score, 25000));
-      const clampedTime = Math.max(0, Math.min(time_taken, 24 * 60 * 60));
-
-      const { data, error } = await supabase
-        .from('daily_scores')
-        .insert({ date, name: safeName, score: clampedScore, time_taken: clampedTime })
-        .select()
-        .single();
-
-      if (error) throw new Error(error.message);
-      const row = data as DailyScoreRow;
-      return {
-        id: row?.id ?? null,
-        date: row?.date ?? date,
-        name: row?.name ?? safeName,
-        score: row?.score ?? clampedScore,
-        time_taken: row?.time_taken ?? clampedTime,
-        created_at: row?.created_at ?? null,
-      };
     },
   },
 };

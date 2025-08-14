@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fileTypeFromBuffer } from 'file-type';
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export async function POST(request: NextRequest) {

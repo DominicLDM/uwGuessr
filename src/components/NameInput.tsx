@@ -1,21 +1,8 @@
 import React from "react";
 import { User, ChevronRight } from "lucide-react";
 import { Filter } from "bad-words";
-import { useMutation, gql } from '@apollo/client';
-
-const ADD_SCORE = gql`
-  mutation AddScore($date: String!, $name: String!, $score: Int!, $time_taken: Int!) {
-    addDailyScore(date: $date, name: $name, score: $score, time_taken: $time_taken) {
-      id
-      date
-      name
-      score
-      time_taken
-      created_at
-    }
-  }
-`;
-
+import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity';
+import { createClient } from '@supabase/supabase-js';
 
 interface NameInputProps {
   show: boolean;
@@ -23,36 +10,151 @@ interface NameInputProps {
   onSubmit: (name: string) => void;
   totalScore: number;
   timeTaken: number;
+  supabaseToken: string | null;
 }
 
-export default function NameInput({ show, onClose, onSubmit, totalScore, timeTaken }: NameInputProps) {
+const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalScore, timeTaken, supabaseToken }) => {
   const [name, setName] = React.useState("");
-  const [addScore] = useMutation(ADD_SCORE);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Initialize obscenity matcher
+  const obscenityMatcher = React.useMemo(() => {
+    return new RegExpMatcher({
+      ...englishDataset.build(),
+      ...englishRecommendedTransformers,
+    });
+  }, []);
+
+  function getUserIdFromToken(token: string | null): string | null {
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.sub || null;
+    } catch {
+      return null;
+    }
+  }
+
+  const filterProfanity = (inputName: string): string => {
+    // bad words filter
+    const filter = new Filter();
+    let cleanName = filter.clean(inputName.trim());
+
+    // Obscenity filter
+    if (obscenityMatcher.hasMatch(cleanName)) {
+      // Get all matches and censor them
+      const matches = obscenityMatcher.getAllMatches(cleanName);
+      
+      // Sort matches by start index in descending order to avoid index shifting issues
+      matches.sort((a, b) => b.startIndex - a.startIndex);
+      
+      // Replace each match with asterisks
+      for (const match of matches) {
+        const replacement = '*'.repeat(match.endIndex - match.startIndex);
+        cleanName = cleanName.slice(0, match.startIndex) + replacement + cleanName.slice(match.endIndex);
+      }
+    }
+    
+    return cleanName;
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    const filter = new Filter();
     e.preventDefault();
+    setError(null);
+    
     if (name.trim()) {
-      const cleanName = filter.clean(name.trim());
+      const cleanName = filterProfanity(name);
       const nyDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
       const year = nyDate.getFullYear();
       const month = String(nyDate.getMonth() + 1).padStart(2, '0');
       const day = String(nyDate.getDate()).padStart(2, '0');
       const date = `${year}-${month}-${day}`;
-      // Submit score to Supabase
-      await addScore({
-        variables: {
-          date: date,
-          name: cleanName,
-          score: totalScore,
-          time_taken: Math.floor(timeTaken / 1000)
-        }
-      });
-      // Mark today's submission so Results page can detect that a name was submitted
+      
+      if (!supabaseToken) {
+        setError('Authentication token not ready');
+        return;
+      }
+      
+      setLoading(true);
+      const user_id = getUserIdFromToken(supabaseToken);
+      if (!user_id) {
+        setError('Could not get user ID from token.');
+        setLoading(false);
+        return;
+      }
+      
       try {
-        localStorage.setItem(`uwGuessrDailySubmitted_${date}`, 'true');
-      } catch {}
-      onSubmit(cleanName);
+        // Create Supabase client with the user's session token
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseAnonKey) {
+          throw new Error('Supabase configuration missing');
+        }
+        
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: {
+              Authorization: `Bearer ${supabaseToken}`
+            }
+          }
+        });
+        
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData?.user) {
+          throw new Error('Authentication failed');
+        }
+        
+        if (userData.user.email) {
+          throw new Error('Only anonymous users can submit daily scores');
+        }
+        
+        // Verify user ID matches
+        if (userData.user.id !== user_id) {
+          throw new Error('User ID mismatch');
+        }
+        
+        // Clamp values for safety
+        const clampedScore = Math.max(0, Math.min(totalScore, 25000));
+        const clampedTime = Math.max(0, Math.min(Math.floor(timeTaken / 1000), 24 * 60 * 60));
+        
+        const { error: insertError } = await supabase
+          .from('daily_scores')
+          .insert({
+            date: date,
+            name: cleanName,
+            score: clampedScore,
+            time_taken: clampedTime,
+            user_id: userData.user.id
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw new Error(insertError.message || 'Failed to submit score');
+        }
+        
+        // Mark today's submission so Results page can detect that a name was submitted
+        try {
+          localStorage.setItem(`uwGuessrDailySubmitted_${date}`, 'true');
+        } catch (storageError) {
+          console.warn('Could not save to localStorage:', storageError);
+        }
+        
+        setLoading(false);
+        onSubmit(cleanName);
+        
+      } catch (err: unknown) {
+        console.error('Submit error:', err);
+        if (typeof err === 'object' && err !== null && 'message' in err) {
+          setError((err as { message?: string }).message || 'Failed to submit score');
+        } else {
+          setError('Failed to submit score');
+        }
+        setLoading(false);
+      }
     }
   };
 
@@ -85,6 +187,21 @@ export default function NameInput({ show, onClose, onSubmit, totalScore, timeTak
             <p className="text-sm sm:text-sm md:text-base text-gray-600">Enter your username to join the leaderboard</p>
           </div>
 
+          {/* Error message */}
+          {error && (
+            <div className="text-red-600 text-sm mb-2 font-semibold text-center bg-red-50 p-2 rounded border border-red-200">
+              {error}
+            </div>
+          )}
+
+          {/* Show loading spinner if token not ready */}
+          {!supabaseToken && (
+            <div className="flex items-center justify-center mb-2">
+              <span className="loader w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mr-2"></span>
+              <span className="text-yellow-600 text-sm">Verifying player...</span>
+            </div>
+          )}
+
           {/* Name Input Form */}
           <form onSubmit={handleSubmit} className="w-full">
             <div className="relative">
@@ -97,14 +214,20 @@ export default function NameInput({ show, onClose, onSubmit, totalScore, timeTak
                 autoFocus
                 maxLength={20}
                 aria-label="Enter your username"
+                disabled={loading || !supabaseToken}
               />
               {name.trim() && (
                 <button
                   type="submit"
                   aria-label="Submit username"
                   className="group absolute inset-y-0 right-2 my-auto h-9 w-9 rounded-md bg-yellow-400 hover:bg-yellow-500 border-2 border-black flex items-center justify-center text-black shadow transition-colors cursor-pointer overflow-hidden"
+                  disabled={loading || !supabaseToken}
                 >
-                  <ChevronRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
+                  {loading ? (
+                    <span className="loader w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    <ChevronRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
+                  )}
                 </button>
               )}
             </div>
@@ -113,4 +236,6 @@ export default function NameInput({ show, onClose, onSubmit, totalScore, timeTak
       </div>
     </div>
   );
-}
+};
+
+export default NameInput;

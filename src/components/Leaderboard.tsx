@@ -300,8 +300,8 @@ export default function LeaderboardModal({
                 let userTime = null;
                 if (leaderboardData && leaderboardData.length > 0) {
                   userScore = leaderboardData[0].totalScore;
-                  // Local time to s
-                  userTime = Math.round(leaderboardData[0].rounds.reduce((sum, r) => sum + r.timetaken, 0) / 1000);
+                  // Local time to s, use Math.floor to match backend
+                  userTime = Math.floor(leaderboardData[0].rounds.reduce((sum, r) => sum + r.timetaken, 0) / 1000);
                 }
                 let userIdx = -1;
                 if (userScore !== null && userTime !== null) {
