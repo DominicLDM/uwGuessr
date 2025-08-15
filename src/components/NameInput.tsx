@@ -2,7 +2,6 @@ import React from "react";
 import { User, ChevronRight } from "lucide-react";
 import { Filter } from "bad-words";
 import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity';
-import { createClient } from '@supabase/supabase-js';
 
 interface NameInputProps {
   show: boolean;
@@ -26,15 +25,6 @@ const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalSco
     });
   }, []);
 
-  function getUserIdFromToken(token: string | null): string | null {
-    if (!token) return null;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.sub || null;
-    } catch {
-      return null;
-    }
-  }
 
   const filterProfanity = (inputName: string): string => {
     // bad words filter
@@ -69,76 +59,76 @@ const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalSco
       const year = nyDate.getFullYear();
       const month = String(nyDate.getMonth() + 1).padStart(2, '0');
       const day = String(nyDate.getDate()).padStart(2, '0');
-      const date = `${year}-${month}-${day}`;
-      
+      const today = `${year}-${month}-${day}`;
+
+      // check that the uwGuessrDaily_today key exists in localStorage
+      const localDaily = localStorage.getItem(`uwGuessrDaily_${today}`);
+      if (!localDaily || localDaily === '[]') {
+        setError('Your results are from a previous day or missing. Please play today\'s daily challenge before submitting.');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+        return;
+      }
+
       if (!supabaseToken) {
         setError('Authentication token not ready');
         return;
       }
       
       setLoading(true);
-      const user_id = getUserIdFromToken(supabaseToken);
-      if (!user_id) {
-        setError('Could not get user ID from token.');
-        setLoading(false);
-        return;
-      }
       
       try {
-        // Create Supabase client with the user's session token
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        
-        if (!supabaseUrl || !supabaseAnonKey) {
-          throw new Error('Supabase configuration missing');
-        }
-        
-        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-          global: {
-            headers: {
-              Authorization: `Bearer ${supabaseToken}`
-            }
-          }
-        });
-        
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData?.user) {
-          throw new Error('Authentication failed');
-        }
-        
-        if (userData.user.email) {
-          throw new Error('Only anonymous users can submit daily scores');
-        }
-        
-        // Verify user ID matches
-        if (userData.user.id !== user_id) {
-          throw new Error('User ID mismatch');
-        }
-        
         // Clamp values for safety
         const clampedScore = Math.max(0, Math.min(totalScore, 25000));
         const clampedTime = Math.max(0, Math.min(Math.floor(timeTaken / 1000), 24 * 60 * 60));
         
-        const { error: insertError } = await supabase
-          .from('daily_scores')
-          .insert({
-            date: date,
-            name: cleanName,
-            score: clampedScore,
-            time_taken: clampedTime,
-            user_id: userData.user.id
+        // Submit via GraphQL mutation
+        const mutation = `
+          mutation SubmitDailyScore($date: String!, $name: String!, $score: Int!, $timeTaken: Int!, $authToken: String!) {
+            submitDailyScore(date: $date, name: $name, score: $score, timeTaken: $timeTaken, authToken: $authToken) {
+              id
+              date
+              name
+              score
+              time_taken
+              user_id
+              created_at
+            }
+          }
+        `;
+
+        const response = await fetch('/api/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: mutation,
+            variables: {
+              date: today,
+              name: cleanName,
+              score: clampedScore,
+              timeTaken: clampedTime,
+              authToken: supabaseToken
+            }
           })
-          .select()
-          .single();
+        });
+
+        const result = await response.json();
         
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          throw new Error(insertError.message || 'Failed to submit score');
+        if (result.errors) {
+          console.error('GraphQL errors:', result.errors);
+          throw new Error(result.errors[0]?.message || 'Failed to submit score');
+        }
+        
+        if (!result.data?.submitDailyScore) {
+          throw new Error('No data returned from submission');
         }
         
         // Mark today's submission so Results page can detect that a name was submitted
         try {
-          localStorage.setItem(`uwGuessrDailySubmitted_${date}`, 'true');
+          localStorage.setItem(`uwGuessrDailySubmitted_${today}`, 'true');
         } catch (storageError) {
           console.warn('Could not save to localStorage:', storageError);
         }

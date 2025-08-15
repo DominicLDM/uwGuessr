@@ -8,6 +8,26 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+const graphqlRateLimit = new Map<string, { count: number; resetTime: number }>();
+
+function checkGraphQLRateLimit(clientIP: string): boolean {
+  const key = `graphql_${clientIP}`;
+  const now = Date.now();
+  
+  const current = graphqlRateLimit.get(key);
+  
+  if (!current || now > current.resetTime) {
+    graphqlRateLimit.set(key, { count: 1, resetTime: now + 60 * 1000 }); // 1 minute window
+    return false;
+  }
+  
+  current.count++;
+  graphqlRateLimit.set(key, current);
+  
+  // Allow max 20 requests per minute per IP for GraphQL
+  return current.count > 20;
+}
+
 const typeDefs = `
   type Photo {
     id: ID!
@@ -45,6 +65,7 @@ const typeDefs = `
   type Mutation {
     approvePhoto(id: ID!, lat: Float!, lng: Float!): Photo
     rejectPhoto(id: ID!): Photo
+    submitDailyScore(date: String!, name: String!, score: Int!, timeTaken: Int!, authToken: String!): DailyScore
   }
 `;
 
@@ -218,6 +239,128 @@ const resolvers = {
       if (error) throw new Error(error.message);
       return data;
     },
+    submitDailyScore: async (
+      _: unknown,
+      { date, name, score, timeTaken, authToken }: { 
+        date: string; 
+        name: string; 
+        score: number; 
+        timeTaken: number; 
+        authToken: string; 
+      },
+      ctx: { request: NextRequest }
+    ) => {
+      // Rate limiting for score submissions
+      const clientIP = ctx.request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                       ctx.request.headers.get('x-real-ip') || 
+                       'unknown';
+      
+      // Simple rate limiting: track submissions per IP
+      const rateLimitKey = `submit_${clientIP}`;
+      const now = Date.now();
+      const current = graphqlRateLimit.get(rateLimitKey);
+      
+      if (!current || now > current.resetTime) {
+        graphqlRateLimit.set(rateLimitKey, { count: 1, resetTime: now + 24 * 60 * 60 * 1000 }); // 24 hours
+      } else {
+        current.count++;
+        graphqlRateLimit.set(rateLimitKey, current);
+        
+        if (current.count > 3) {
+          throw new Error('Rate limit exceeded. Maximum 3 submissions per day per IP.');
+        }
+      }
+      
+      // Validate inputs
+      if (!date || !name || score === undefined || timeTaken === undefined || !authToken) {
+        throw new Error('All fields are required');
+      }
+
+      // Validate score and time ranges
+      if (score < 0 || score > 25000) {
+        throw new Error('Invalid score range');
+      }
+      if (timeTaken < 0 || timeTaken > 86400) {
+        throw new Error('Invalid time range');
+      }
+      if (name.length < 1 || name.length > 30) {
+        throw new Error('Invalid name length');
+      }
+
+      // Create authenticated Supabase client
+      const authenticatedSupabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${authToken}`
+            }
+          }
+        }
+      );
+
+      // Verify the user session
+      const { data: userData, error: userError } = await authenticatedSupabase.auth.getUser();
+      if (userError || !userData?.user) {
+        console.error('Auth error:', userError);
+        throw new Error('Authentication failed');
+      }
+
+      console.log('User data:', {
+        id: userData.user.id,
+        email: userData.user.email,
+        isAnonymous: !userData.user.email
+      });
+
+      // Ensure it's an anonymous user (no email)
+      if (userData.user.email) {
+        throw new Error('Only anonymous users can submit daily scores');
+      }
+
+      // Check if user already submitted today
+      const { data: existingSubmission, error: checkError } = await authenticatedSupabase
+        .from('daily_scores')
+        .select('id')
+        .eq('user_id', userData.user.id)
+        .eq('date', date)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Check error:', checkError);
+        throw new Error('Failed to check existing submission');
+      }
+
+      if (existingSubmission) {
+        throw new Error('You have already submitted a score for today');
+      }
+
+      // Insert the score
+      const { data: insertedScore, error: insertError } = await authenticatedSupabase
+        .from('daily_scores')
+        .insert({
+          date,
+          name,
+          score,
+          time_taken: timeTaken,
+          user_id: userData.user.id
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        console.error('Insert error details:', {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint
+        });
+        throw new Error(insertError.message || 'Failed to submit score');
+      }
+
+      return insertedScore;
+    },
   },
 };
 
@@ -236,5 +379,18 @@ export async function POST(request: NextRequest) {
   if (cl && Number(cl) > 100_000) {
     return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   }
+  
+  // Additional rate limiting check
+  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown';
+  
+  if (checkGraphQLRateLimit(clientIP)) {
+    return NextResponse.json(
+      { error: 'GraphQL rate limit exceeded. Please try again later.' },
+      { status: 429 }
+    );
+  }
+  
   return handler(request);
 }

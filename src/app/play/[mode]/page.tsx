@@ -35,19 +35,75 @@ query GetDailyPhotos($count: Int!) {
 `;
 
 export default function PlayPage() {
+    const getNYDateString = () => {
+        const nyDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const year = nyDate.getFullYear();
+        const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+        const day = String(nyDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const router = useRouter();
+    const params = useParams();
+    const { mode } = params;
+
+    // stale check
+    useEffect(() => {
+        if (mode === 'daily') {
+            const today = getNYDateString();
+            const key = `uwGuessrDailyProgress_${today}`;
+            if (!localStorage.getItem(key)) {
+                localStorage.setItem(key, JSON.stringify({ gameState: null, images: [], mode }));
+            }
+        }
+    }, [mode]);
+
+    // Robust daily challenge state management
+    useEffect(() => {
+        if (mode !== 'daily') return;
+        const today = getNYDateString();
+        const key = `uwGuessrDailyProgress_${today}`;
+        // Remove any old progress keys
+        Object.keys(localStorage)
+            .filter(k => k.startsWith('uwGuessrDailyProgress_') && k !== key)
+            .forEach(k => localStorage.removeItem(k));
+
+        // Only redirect if the user is in the middle of a stale daily game (has a current game in sessionStorage)
+        if (!localStorage.getItem(key) && sessionStorage.getItem('uwGuessrCurrentGame')) {
+            sessionStorage.removeItem('uwGuessrCurrentGame');
+            sessionStorage.setItem('uwGuessrFreshStart', 'true');
+            router.replace('/');
+            return;
+        }
+
+        // interval to check for stale daily
+        const interval = setInterval(() => {
+            const currentToday = getNYDateString();
+            const currentKey = `uwGuessrDailyProgress_${currentToday}`;
+            Object.keys(localStorage)
+                .filter(k => k.startsWith('uwGuessrDailyProgress_') && k !== currentKey)
+                .forEach(k => localStorage.removeItem(k));
+            // Only redirect if the user is in the middle of a stale daily game
+            if (!localStorage.getItem(currentKey) && sessionStorage.getItem('uwGuessrCurrentGame')) {
+                sessionStorage.removeItem('uwGuessrCurrentGame');
+                sessionStorage.setItem('uwGuessrFreshStart', 'true');
+                alert('A new daily challenge is available! Redirecting to homepage.');
+                router.replace('/');
+            }
+        }, 20000);
+        return () => clearInterval(interval);
+    }, [mode, router]);
+
     const [images, setImages] = useState<Photo[]>([]);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isMobile, setIsMobile] = useState<boolean | null>(null); // Start as null to prevent flickering
     const [mapDetail, setMapDetail] = useState<'high' | 'low'>('high'); // Map detail state for desktop background
     
-    const router = useRouter();
-    const params = useParams();
-    const { mode } = params;
-    
     const { gameState, actions } = useGameState(mode as string)
 
     // Game state persistence functions
-    const saveGameState = (gameState: GameState, images: Photo[]) => {
+    // Only create daily progress key after proper initialization
+    const saveGameState = (gameState: GameState, images: Photo[], isInitial = false) => {
         const gameData = {
             gameState,
             images,
@@ -59,14 +115,10 @@ export default function PlayPage() {
         
         // For daily challenges, also save progress to localStorage to prevent cheating
         if (mode === 'daily') {
-            const nyDate = new Date(
-              new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
-            );
-            const year = nyDate.getFullYear();
-            const month = String(nyDate.getMonth() + 1).padStart(2, '0');
-            const day = String(nyDate.getDate()).padStart(2, '0');
-            const today = `${year}-${month}-${day}`;
-            localStorage.setItem(`uwGuessrDailyProgress_${today}`, JSON.stringify(gameData));
+            const today = getNYDateString();
+            if (isInitial) {
+                localStorage.setItem(`uwGuessrDailyProgress_${today}`, JSON.stringify(gameData));
+            }
         }
     };
 
@@ -95,16 +147,18 @@ export default function PlayPage() {
             // Clear the fresh start flag and any existing game data
             sessionStorage.removeItem('uwGuessrFreshStart');
             sessionStorage.removeItem('uwGuessrCurrentGame');
-            
+            if (mode === 'daily') {
+                const today = getNYDateString();
+                localStorage.setItem(`uwGuessrDailyProgress_${today}`, JSON.stringify({ gameState: null, images: [], mode }));
+            }
             // Force refetch of fresh data
             refetch().then((result) => {
                 const newImages = mode === "random" ? result.data.randomPhotos : result.data.dailyPhotos;
                 setImages(newImages);
                 actions.resetGame();
                 actions.startRound();
-                
-                // Save initial state
-                saveGameState(gameState, newImages);
+                // Save initial state and update daily progress key
+                saveGameState(gameState, newImages, mode === 'daily');
             }).catch((err) => {
                 console.error('Failed to fetch fresh images:', err);
             });
@@ -128,16 +182,24 @@ export default function PlayPage() {
             actions.startRound();
             
             // Save initial state
-            saveGameState(gameState, newImages);
+            saveGameState(gameState, newImages, false);
         }
     }, [data, mode, refetch]);
 
     // Save game state whenever it changes
     useEffect(() => {
         if (images.length > 0) {
-            saveGameState(gameState, images);
+            // For daily, only update progress key if it already exists (after fresh start)
+            if (mode === 'daily') {
+                const today = getNYDateString();
+                if (localStorage.getItem(`uwGuessrDailyProgress_${today}`)) {
+                    saveGameState(gameState, images, false);
+                }
+            } else {
+                saveGameState(gameState, images, false);
+            }
         }
-    }, [gameState, images]);
+    }, [gameState, images, mode]);
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 640);
@@ -146,12 +208,24 @@ export default function PlayPage() {
         return () => window.removeEventListener("resize", check);
     }, []);
 
+    // check if today's daily is valid before allowing actions
+    const isTodayDailyValid = () => {
+        if (mode !== 'daily') return true;
+        const today = getNYDateString();
+        return !!localStorage.getItem(`uwGuessrDailyProgress_${today}`);
+    };
+
     // Memoize callbacks to prevent unnecessary re-renders
     const handleSubmitGuess = useCallback(() => {
+        if (!isTodayDailyValid()) {
+            alert('A new daily challenge is available! Redirecting to homepage.');
+            router.push('/');
+            return;
+        }
         if (images[gameState.currentRound - 1]) {
             actions.submitGuess(images[gameState.currentRound - 1]);
         }
-    }, [actions, images, gameState.currentRound]);
+    }, [actions, images, gameState.currentRound, mode, router]);
 
     const handleToggleMapDetail = useCallback(() => {
         setMapDetail(prev => prev === 'high' ? 'low' : 'high');
