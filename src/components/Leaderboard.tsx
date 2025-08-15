@@ -210,9 +210,8 @@ export default function LeaderboardModal({
             </div>
           )}
 
-          {/* Leaderboard Table */}
           <div className="w-full mb-4 sm:mb-4 md:mb-5">
-            <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 mb-2 sm:mb-2 md:mb-3 text-sm sm:text-sm md:text-base font-bold text-gray-600 border-b-2 border-gray-200 pb-2 px-3 sm:px-3 md:px-4">
+            <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 mb-2 sm:mb-2 md:mb-3 text-sm sm:text-sm md:text-base font-bold text-gray-600 border-b-2 border-gray-200 pb-2 px-3 sm:px-3 md:px-4 items-center">
               <div>Player</div>
               <div className="text-right">Time</div>
               <div className="text-right">Score</div>
@@ -221,25 +220,25 @@ export default function LeaderboardModal({
               {loading ? (
                 <>
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="grid grid-cols-[1fr_56px_80px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 items-center px-2 sm:px-3 md:px-4">
+                    <div key={i} className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 px-3 sm:px-3 md:px-4 items-center">
                       <div className={`font-bold text-sm sm:text-base md:text-lg ${getRankTextColor(i)}`}>
                         {i}. <span className="inline-block align-middle h-3 w-16 sm:h-4 sm:w-24 bg-gray-200 rounded blur-[1px]" />
                       </div>
-                      <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                      <div className="text-right font-sans tabular-nums">
                         <span className="inline-block h-3 w-8 sm:h-4 sm:w-10 bg-gray-200 rounded blur-[1px]" />
                       </div>
-                      <div className="text-right justify-self-end font-bold text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                      <div className="text-right font-bold font-sans tabular-nums">
                         <span className="inline-block h-3 w-12 sm:h-4 sm:w-16 bg-gray-200 rounded blur-[1px]" />
                       </div>
                     </div>
                   ))}
                   <div className="border-t-2 border-black my-2" />
-                  <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 items-center px-3 sm:px-3 md:px-4">
+                  <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 px-3 sm:px-3 md:px-4 items-center">
                     <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
-                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-medium font-sans tabular-nums">
+                    <div className="text-right font-medium font-sans tabular-nums">
                       <span className="inline-block h-4 w-10 bg-gray-200 rounded blur-[1px]" />
                     </div>
-                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-bold font-sans tabular-nums">
+                    <div className="text-right font-bold font-sans tabular-nums">
                       <span className="inline-block h-4 w-16 bg-gray-200 rounded blur-[1px]" />
                     </div>
                   </div>
@@ -251,28 +250,36 @@ export default function LeaderboardModal({
                     const rank = index + 1;
                     const textColor = getRankTextColor(rank);
                     return (
-                      <div key={player.uid} className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 items-center px-3 sm:px-3 md:px-4">
-                        <div className={`font-bold text-sm sm:text-base md:text-lg ${textColor}`}>
+                      <div
+                        key={player.uid}
+                        className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-2 sm:py-2 md:py-2.5 px-3 sm:px-3 md:px-4 items-center"
+                      >
+                        <div
+                          className={`font-bold text-sm sm:text-base md:text-lg ${textColor}`}
+                          style={{
+                            wordBreak: 'break-all',
+                            overflowWrap: 'anywhere'
+                          }}
+                          title={player.name}
+                        >
                           {rank}. {player.name}
                         </div>
-                        <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                        <div className="text-right font-sans tabular-nums text-xs sm:text-sm md:text-base">
                           {formatTime(player.timetaken)}
                         </div>
-                        <div className="text-right justify-self-end font-bold text-xs sm:text-sm md:text-base font-sans tabular-nums">
+                        <div className="text-right font-bold font-sans tabular-nums text-xs sm:text-sm md:text-base">
                           {player.score.toLocaleString('en-US')}
                         </div>
                       </div>
                     );
                   })}
-
                   <div className="border-t-2 border-black my-2" />
-                  {/* Average row */}
-                  <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 items-center px-3 sm:px-3 md:px-4">
+                  <div className="grid grid-cols-[1fr_72px_120px] gap-2 md:gap-3 py-1 sm:py-1 md:py-2 lg:py-3 px-3 sm:px-3 md:px-4 items-center">
                     <div className="font-bold text-black text-sm sm:text-base md:text-lg">Avg:</div>
-                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-medium font-sans tabular-nums">
+                    <div className="text-right font-medium font-sans tabular-nums">
                       {formatTime(processedData.avgTime)}
                     </div>
-                    <div className="text-right justify-self-end text-xs sm:text-sm md:text-base font-bold font-sans tabular-nums">
+                    <div className="text-right font-bold font-sans tabular-nums">
                       {processedData.avgScore.toLocaleString('en-US')}
                     </div>
                   </div>
