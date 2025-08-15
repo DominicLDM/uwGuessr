@@ -307,11 +307,27 @@ const resolvers = {
         throw new Error('Authentication failed');
       }
 
-      console.log('User data:', {
-        id: userData.user.id,
-        email: userData.user.email,
-        isAnonymous: !userData.user.email
-      });
+             console.log('User data:', {
+         id: userData.user.id,
+         email: userData.user.email,
+         isAnonymous: !userData.user.email
+       });
+
+       // Log this specific score submission with user ID
+       try {
+         await supabase.rpc('log_api_request', {
+           p_ip_address: clientIP,
+           p_user_agent: ctx.request.headers.get('user-agent') || 'unknown',
+           p_endpoint: 'submit_daily_score',
+           p_method: 'POST',
+           p_user_id: userData.user.id,
+           p_request_body: { date, name, score, timeTaken },
+           p_response_status: 200,
+           p_response_time_ms: 0
+         });
+       } catch (logError) {
+         console.error('Failed to log score submission:', logError);
+       }
 
       // Ensure it's an anonymous user (no email)
       if (userData.user.email) {
@@ -375,16 +391,31 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   const cl = request.headers.get('content-length');
   if (cl && Number(cl) > 100_000) {
     return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   }
   
-  // Additional rate limiting check
+  // Get client info
   const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
                    request.headers.get('x-real-ip') || 
                    'unknown';
+  const userAgent = request.headers.get('user-agent') || 'unknown';
   
+  // Check if IP is blocked
+  const { data: isBlocked } = await supabase
+    .rpc('is_ip_blocked', { p_ip_address: clientIP });
+  
+  if (isBlocked) {
+    console.log('Blocked request from IP:', clientIP);
+    return NextResponse.json(
+      { error: 'Access denied. Your IP has been blocked for suspicious activity.' },
+      { status: 403 }
+    );
+  }
+  
+  // Additional rate limiting check
   if (checkGraphQLRateLimit(clientIP)) {
     return NextResponse.json(
       { error: 'GraphQL rate limit exceeded. Please try again later.' },
@@ -392,5 +423,36 @@ export async function POST(request: NextRequest) {
     );
   }
   
-  return handler(request);
+  // Clone the request to read body for logging
+  const clonedRequest = request.clone();
+  
+  // Handle the request
+  const response = await handler(request);
+  const responseTime = Date.now() - startTime;
+  
+  // Log the API request
+  try {
+    const body = await clonedRequest.text();
+    let requestBody = null;
+    try {
+      requestBody = JSON.parse(body);
+    } catch {
+      // Ignore parsing errors
+    }
+    
+    await supabase.rpc('log_api_request', {
+      p_ip_address: clientIP,
+      p_user_agent: userAgent,
+      p_endpoint: 'graphql',
+      p_method: 'POST',
+      p_user_id: null, // Will be extracted from GraphQL context if available
+      p_request_body: requestBody,
+      p_response_status: response.status,
+      p_response_time_ms: responseTime
+    });
+  } catch (logError) {
+    console.error('Failed to log API request:', logError);
+  }
+  
+  return response;
 }
