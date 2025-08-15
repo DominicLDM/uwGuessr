@@ -249,15 +249,16 @@ const resolvers = {
       },
       ctx: { request: NextRequest }
     ) => {
-      // Rate limiting for score submissions (optional, can keep)
+      // Get client IP
       const clientIP = ctx.request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                       ctx.request.headers.get('x-real-ip') || 
-                       'unknown';
+                      ctx.request.headers.get('x-real-ip') || 
+                      'unknown';
 
-      // Validate inputs
+      // Validate inputs (keep your existing validation)
       if (!date || !name || score === undefined || timeTaken === undefined) {
         throw new Error('All fields are required');
       }
+
       if (score < 0 || score > 25000) {
         throw new Error('Invalid score range');
       }
@@ -268,23 +269,36 @@ const resolvers = {
         throw new Error('Invalid name length');
       }
 
-      // Call Edge Function from backend
-      const edgeResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/submit-daily-score`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-forwarded-for': clientIP,
-          },
-          body: JSON.stringify({ name, score, timeTaken, date })
+      // Call Edge Function
+      try {
+        const edgeResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/submit-daily-score`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-forwarded-for': clientIP,
+            },
+            body: JSON.stringify({ name, score, timeTaken, date })
+          }
+        );
+        
+        const result = await edgeResponse.json();
+        
+        if (!edgeResponse.ok) {
+          // Handle specific rate limit error
+          if (edgeResponse.status === 429) {
+            throw new Error('Daily submission limit reached. You can submit up to 3 scores per day.');
+          }
+          throw new Error(result.error || 'Failed to submit score');
         }
-      );
-      const result = await edgeResponse.json();
-      if (!edgeResponse.ok) {
-        throw new Error(result.error || 'Failed to submit score');
+        
+        return result.data?.[0] || result.data || null;
+        
+      } catch (fetchError) {
+        console.error('Edge function call failed:', fetchError);
+        throw new Error(fetchError instanceof Error ? fetchError.message : 'Failed to submit score');
       }
-      return result.data?.[0] || result.data || null;
     },
   },
 };
