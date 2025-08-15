@@ -2,6 +2,7 @@ import React from "react";
 import { User, ChevronRight } from "lucide-react";
 import { Filter } from "bad-words";
 import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity';
+import { gql, useMutation } from '@apollo/client';
 
 interface NameInputProps {
   show: boolean;
@@ -9,10 +10,24 @@ interface NameInputProps {
   onSubmit: (name: string) => void;
   totalScore: number;
   timeTaken: number;
-  supabaseToken: string | null;
 }
 
-const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalScore, timeTaken, supabaseToken }) => {
+const SUBMIT_DAILY_SCORE = gql`
+  mutation SubmitDailyScore($date: String!, $name: String!, $score: Int!, $timeTaken: Int!) {
+    submitDailyScore(date: $date, name: $name, score: $score, timeTaken: $timeTaken) {
+      id
+      date
+      name
+      score
+      time_taken
+      user_id
+      created_at
+    }
+  }
+`;
+
+const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalScore, timeTaken }) => {
+  const [submitDailyScore] = useMutation(SUBMIT_DAILY_SCORE);
   const [name, setName] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -71,59 +86,25 @@ const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalSco
         return;
       }
 
-      if (!supabaseToken) {
-        setError('Authentication token not ready');
-        return;
-      }
-      
       setLoading(true);
       
       try {
         // Clamp values for safety
         const clampedScore = Math.max(0, Math.min(totalScore, 25000));
         const clampedTime = Math.max(0, Math.min(Math.floor(timeTaken / 1000), 24 * 60 * 60));
-        
-        // Submit via GraphQL mutation
-        const mutation = `
-          mutation SubmitDailyScore($date: String!, $name: String!, $score: Int!, $timeTaken: Int!, $authToken: String!) {
-            submitDailyScore(date: $date, name: $name, score: $score, timeTaken: $timeTaken, authToken: $authToken) {
-              id
-              date
-              name
-              score
-              time_taken
-              user_id
-              created_at
-            }
-          }
-        `;
 
-        const response = await fetch('/api/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: mutation,
-            variables: {
-              date: today,
-              name: cleanName,
-              score: clampedScore,
-              timeTaken: clampedTime,
-              authToken: supabaseToken
-            }
-          })
+        // Submit via GraphQL mutation
+        const { data } = await submitDailyScore({
+          variables: {
+            date: today,
+            name: cleanName,
+            score: clampedScore,
+            timeTaken: clampedTime
+          }
         });
 
-        const result = await response.json();
-        
-        if (result.errors) {
-          console.error('GraphQL errors:', result.errors);
-          throw new Error(result.errors[0]?.message || 'Failed to submit score');
-        }
-        
-        if (!result.data?.submitDailyScore) {
-          throw new Error('No data returned from submission');
+        if (!data?.submitDailyScore) {
+          throw new Error('Failed to submit score');
         }
         
         // Mark today's submission so Results page can detect that a name was submitted
@@ -138,11 +119,9 @@ const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalSco
         
       } catch (err: unknown) {
         console.error('Submit error:', err);
-        if (typeof err === 'object' && err !== null && 'message' in err) {
-          setError((err as { message?: string }).message || 'Failed to submit score');
-        } else {
-          setError('Failed to submit score');
-        }
+        setError(typeof err === 'object' && err !== null && 'message' in err
+          ? (err as { message?: string }).message || 'Failed to submit score'
+          : 'Failed to submit score');
         setLoading(false);
       }
     }
@@ -184,14 +163,6 @@ const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalSco
             </div>
           )}
 
-          {/* Show loading spinner if token not ready */}
-          {!supabaseToken && (
-            <div className="flex items-center justify-center mb-2">
-              <span className="loader w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mr-2"></span>
-              <span className="text-yellow-600 text-sm">Verifying player...</span>
-            </div>
-          )}
-
           {/* Name Input Form */}
           <form onSubmit={handleSubmit} className="w-full">
             <div className="relative">
@@ -204,14 +175,14 @@ const NameInput: React.FC<NameInputProps> = ({ show, onClose, onSubmit, totalSco
                 autoFocus
                 maxLength={20}
                 aria-label="Enter your username"
-                disabled={loading || !supabaseToken}
+                disabled={loading}
               />
               {name.trim() && (
                 <button
                   type="submit"
                   aria-label="Submit username"
                   className="group absolute inset-y-0 right-2 my-auto h-9 w-9 rounded-md bg-yellow-400 hover:bg-yellow-500 border-2 border-black flex items-center justify-center text-black shadow transition-colors cursor-pointer overflow-hidden"
-                  disabled={loading || !supabaseToken}
+                  disabled={loading}
                 >
                   {loading ? (
                     <span className="loader w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></span>

@@ -65,7 +65,7 @@ const typeDefs = `
   type Mutation {
     approvePhoto(id: ID!, lat: Float!, lng: Float!): Photo
     rejectPhoto(id: ID!): Photo
-    submitDailyScore(date: String!, name: String!, score: Int!, timeTaken: Int!, authToken: String!): DailyScore
+    submitDailyScore(date: String!, name: String!, score: Int!, timeTaken: Int!): DailyScore
   }
 `;
 
@@ -241,42 +241,23 @@ const resolvers = {
     },
     submitDailyScore: async (
       _: unknown,
-      { date, name, score, timeTaken, authToken }: { 
+      { date, name, score, timeTaken }: { 
         date: string; 
         name: string; 
         score: number; 
         timeTaken: number; 
-        authToken: string; 
       },
       ctx: { request: NextRequest }
     ) => {
-      // Rate limiting for score submissions
+      // Rate limiting for score submissions (optional, can keep)
       const clientIP = ctx.request.headers.get('x-forwarded-for')?.split(',')[0] || 
                        ctx.request.headers.get('x-real-ip') || 
                        'unknown';
-      
-      // Simple rate limiting: track submissions per IP
-      const rateLimitKey = `submit_${clientIP}`;
-      const now = Date.now();
-      const current = graphqlRateLimit.get(rateLimitKey);
-      
-      if (!current || now > current.resetTime) {
-        graphqlRateLimit.set(rateLimitKey, { count: 1, resetTime: now + 24 * 60 * 60 * 1000 }); // 24 hours
-      } else {
-        current.count++;
-        graphqlRateLimit.set(rateLimitKey, current);
-        
-        if (current.count > 3) {
-          throw new Error('Rate limit exceeded. Maximum 3 submissions per day per IP.');
-        }
-      }
-      
+
       // Validate inputs
-      if (!date || !name || score === undefined || timeTaken === undefined || !authToken) {
+      if (!date || !name || score === undefined || timeTaken === undefined) {
         throw new Error('All fields are required');
       }
-
-      // Validate score and time ranges
       if (score < 0 || score > 25000) {
         throw new Error('Invalid score range');
       }
@@ -287,95 +268,23 @@ const resolvers = {
         throw new Error('Invalid name length');
       }
 
-      // Create authenticated Supabase client
-      const authenticatedSupabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      // Call Edge Function from backend
+      const edgeResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/submit-daily-score`,
         {
-          global: {
-            headers: {
-              Authorization: `Bearer ${authToken}`
-            }
-          }
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-forwarded-for': clientIP,
+          },
+          body: JSON.stringify({ name, score, timeTaken, date })
         }
       );
-
-      // Verify the user session
-      const { data: userData, error: userError } = await authenticatedSupabase.auth.getUser();
-      if (userError || !userData?.user) {
-        console.error('Auth error:', userError);
-        throw new Error('Authentication failed');
+      const result = await edgeResponse.json();
+      if (!edgeResponse.ok) {
+        throw new Error(result.error || 'Failed to submit score');
       }
-
-             console.log('User data:', {
-         id: userData.user.id,
-         email: userData.user.email,
-         isAnonymous: !userData.user.email
-       });
-
-       // Log this specific score submission with user ID
-       try {
-         await supabase.rpc('log_api_request', {
-           p_ip_address: clientIP,
-           p_user_agent: ctx.request.headers.get('user-agent') || 'unknown',
-           p_endpoint: 'submit_daily_score',
-           p_method: 'POST',
-           p_user_id: userData.user.id,
-           p_request_body: { date, name, score, timeTaken },
-           p_response_status: 200,
-           p_response_time_ms: 0
-         });
-       } catch (logError) {
-         console.error('Failed to log score submission:', logError);
-       }
-
-      // Ensure it's an anonymous user (no email)
-      if (userData.user.email) {
-        throw new Error('Only anonymous users can submit daily scores');
-      }
-
-      // Check if user already submitted today
-      const { data: existingSubmission, error: checkError } = await authenticatedSupabase
-        .from('daily_scores')
-        .select('id')
-        .eq('user_id', userData.user.id)
-        .eq('date', date)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Check error:', checkError);
-        throw new Error('Failed to check existing submission');
-      }
-
-      if (existingSubmission) {
-        throw new Error('You have already submitted a score for today');
-      }
-
-      // Insert the score
-      const { data: insertedScore, error: insertError } = await authenticatedSupabase
-        .from('daily_scores')
-        .insert({
-          date,
-          name,
-          score,
-          time_taken: timeTaken,
-          user_id: userData.user.id
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        console.error('Insert error details:', {
-          code: insertError.code,
-          message: insertError.message,
-          details: insertError.details,
-          hint: insertError.hint
-        });
-        throw new Error(insertError.message || 'Failed to submit score');
-      }
-
-      return insertedScore;
+      return result.data?.[0] || result.data || null;
     },
   },
 };
