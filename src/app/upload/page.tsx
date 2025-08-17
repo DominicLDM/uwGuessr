@@ -273,7 +273,7 @@ export default function UploadPage() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
                 <button
                     onClick={handleBackToHome}
-                    className="inline-flex items-center gap-2 text-gray-600 hover:text-yellow-500 transition-colors group"
+                    className="inline-flex items-center gap-2 text-gray-600 hover:text-yellow-500 transition-colors group cursor-pointer"
                 >
                     <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer group-hover:-translate-x-1 transition-transform" />
                     <span className="text-sm sm:text-base font-medium">Back to Home</span>
