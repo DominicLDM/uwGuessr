@@ -266,7 +266,7 @@ export default function Component() {
         <div className="flex flex-col sm:flex-row gap-4 mb-8 relative z-10">
           <Button
             size="lg"
-            className="group bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 text-lg rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => handleNavigation("/play/random")}
             disabled={isNavigating}
           >
