@@ -201,6 +201,10 @@ export default function LeaderboardModal({
           <div className="text-center mb-4 sm:mb-4 md:mb-5">
             <Trophy size={24} className="text-yellow-500 mx-auto mb-2 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />
             <h2 className="text-xl sm:text-xl md:text-2xl lg:text-3xl font-bold text-black mb-1">Daily Challenge #{dailyNumber}</h2>
+            <div className="text-center text-md sm:text-lg text-yellow-500 font-medium mb-1">
+              {/* Daily message placeholder */}
+              Animal themed today! Thanks everyone for the great submissions :)
+            </div>
           </div>
 
           {/* Error State */}
