@@ -249,10 +249,17 @@ const resolvers = {
       },
       ctx: { request: NextRequest }
     ) => {
-      // Get client IP
-      const clientIP = ctx.request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                      ctx.request.headers.get('x-real-ip') || 
-                      'unknown';
+      // Get client IP (Vercel recommended)
+      function getClientIP(request: NextRequest): string {
+        const vercelIP = request.headers.get('x-vercel-forwarded-for');
+        if (vercelIP) return vercelIP.split(',')[0].trim();
+        const forwardedFor = request.headers.get('x-forwarded-for');
+        if (forwardedFor) return forwardedFor.split(',')[0].trim();
+        const realIP = request.headers.get('x-real-ip');
+        if (realIP) return realIP.trim();
+        return request.headers.get('remote-addr') || 'unknown';
+      }
+      const clientIP = getClientIP(ctx.request);
 
       // Validate inputs (keep your existing validation)
       if (!date || !name || score === undefined || timeTaken === undefined) {
