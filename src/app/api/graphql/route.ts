@@ -10,6 +10,42 @@ const supabase = createClient(
 
 const graphqlRateLimit = new Map<string, { count: number; resetTime: number }>();
 
+// Updated IP extraction function
+function getClientIP(request: NextRequest): string {
+  // According to Vercel docs, x-forwarded-for contains the public IP
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  
+  // x-real-ip is identical to x-forwarded-for per Vercel docs
+  const realIP = request.headers.get('x-real-ip');
+  if (realIP) {
+    return realIP.trim();
+  }
+  
+  return 'unknown';
+}
+
+// Add debugging function to see what's actually happening
+function debugIPHeaders(request: NextRequest) {
+  const headers = {
+    'x-forwarded-for': request.headers.get('x-forwarded-for'),
+    'x-real-ip': request.headers.get('x-real-ip'),
+    'x-vercel-ip-country': request.headers.get('x-vercel-ip-country'),
+    'x-vercel-ip-city': request.headers.get('x-vercel-ip-city'),
+    'x-vercel-ip-latitude': request.headers.get('x-vercel-ip-latitude'),
+    'x-vercel-ip-longitude': request.headers.get('x-vercel-ip-longitude'),
+  };
+  
+  console.log('=== IP DEBUG ===');
+  console.log('Headers:', JSON.stringify(headers, null, 2));
+  console.log('Extracted IP:', getClientIP(request));
+  console.log('===============');
+  
+  return headers;
+}
+
 function checkGraphQLRateLimit(clientIP: string): boolean {
   const key = `graphql_${clientIP}`;
   const now = Date.now();
@@ -249,17 +285,11 @@ const resolvers = {
       },
       ctx: { request: NextRequest }
     ) => {
-      // Get client IP (Vercel version)
-      function getClientIP(request: NextRequest): string {
-        const vercelIP = request.headers.get('x-vercel-forwarded-for');
-        if (vercelIP) return vercelIP.split(',')[0].trim();
-        const forwardedFor = request.headers.get('x-forwarded-for');
-        if (forwardedFor) return forwardedFor.split(',')[0].trim();
-        const realIP = request.headers.get('x-real-ip');
-        if (realIP) return realIP.trim();
-        return request.headers.get('remote-addr') || 'unknown';
-      }
+      // Use the shared IP extraction function
       const clientIP = getClientIP(ctx.request);
+
+      // Add debugging
+      debugIPHeaders(ctx.request);
 
       // Validate inputs (keep your existing validation)
       if (!date || !name || score === undefined || timeTaken === undefined) {
@@ -327,11 +357,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   }
   
-  // Get client info
-  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                   request.headers.get('x-real-ip') || 
-                   'unknown';
+  const clientIP = getClientIP(request);
   const userAgent = request.headers.get('user-agent') || 'unknown';
+  
+  debugIPHeaders(request);
   
   // Check if IP is blocked
   const { data: isBlocked } = await supabase
