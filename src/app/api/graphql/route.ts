@@ -249,7 +249,7 @@ const resolvers = {
       },
       ctx: { request: NextRequest }
     ) => {
-      // Get client IP (Vercel recommended)
+      // Get client IP (Vercel version)
       function getClientIP(request: NextRequest): string {
         const vercelIP = request.headers.get('x-vercel-forwarded-for');
         if (vercelIP) return vercelIP.split(',')[0].trim();
