@@ -313,10 +313,9 @@ const resolvers = {
           {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'x-forwarded-for': clientIP,
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name, score, timeTaken, date })
+            body: JSON.stringify({ name, score, timeTaken, date, clientIP })
           }
         );
         
