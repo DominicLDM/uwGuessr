@@ -392,6 +392,32 @@ export default function Component() {
                 >
                   Dominic
                 </a>
+                
+            <div className="mt-1 text-center">
+                  <p className="text-gray-600 text-xs mb-1">servers are getting expensive sooo</p>
+                  <a
+                    href="https://ko-fi.com/dominicldm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-center gap-1 text-pink-500 hover:text-pink-700 font-medium transition-all duration-300 cursor-pointer text-xs relative hover:scale-105"
+                  >
+                    <span className="relative bg-gradient-to-r from-pink-100 to-pink-50 group-hover:from-pink-200 group-hover:to-pink-100 px-1 py-0.5 rounded transition-all duration-300 border-b-2 border-pink-300 group-hover:border-pink-500">
+                      Contribute to the
+                    </span>
+                    <span className="relative inline-block mx-1">
+                      <span className="text-gray-400 relative bg-gray-50 group-hover:bg-gray-100 px-1 py-0.5 rounded transition-all duration-300">
+                        Coffee
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="w-full h-0.5 bg-pink-400 group-hover:bg-pink-600 transform -rotate-12 opacity-80 transition-all duration-300"></span>
+                        </span>
+                      </span>
+                    </span>
+                    <span className="relative bg-gradient-to-r from-pink-100 to-pink-50 group-hover:from-pink-200 group-hover:to-pink-100 px-1 py-0.5 rounded transition-all duration-300 border-b-2 border-pink-300 group-hover:border-pink-500">
+                      Slushy fund
+                    </span>
+                    <span className="text-lg transition-transform duration-300">🍧</span>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
