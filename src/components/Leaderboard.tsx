@@ -205,10 +205,6 @@ export default function LeaderboardModal({
               {/* Daily message placeholder */}
               Thanks everyone for playing and for the great submissions :)
             </div>
-            <div className="text-center text-sm sm:text-md text-slate-600 font-medium mb-1">
-              {/* message */}
-              sorry if your submissions are getting rejected, I am working on it
-            </div>
           </div>
 
           {/* Error State */}
