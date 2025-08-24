@@ -203,7 +203,7 @@ export default function LeaderboardModal({
             <h2 className="text-xl sm:text-xl md:text-2xl lg:text-3xl font-bold text-black mb-1">Daily Challenge #{dailyNumber}</h2>
             <div className="text-center text-md sm:text-lg text-yellow-500 font-medium mb-1">
               {/* Daily message placeholder */}
-              Thanks everyone for playing and for the great submissions :)
+              no way anyone gets 25k today (╯°□°)╯︵ ┻━┻
             </div>
           </div>
 
